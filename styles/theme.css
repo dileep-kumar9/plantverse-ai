@@ -1,0 +1,35 @@
+:root {
+  --app-background: #f6f8f6;
+  --header-background: #ffffff;
+  --surface-primary: #ffffff;
+  --surface-secondary: #eef3ef;
+  --surface-hover: #e8f0ea;
+
+  --text-primary: #172019;
+  --text-secondary: #667269;
+  --text-tertiary: #929c95;
+
+  --border-color: #dde5df;
+
+  --brand-primary: var(--brand-600);
+  --brand-secondary: var(--brand-700);
+  --brand-soft: var(--brand-100);
+}
+
+.dark {
+  --app-background: #0c120e;
+  --header-background: #111914;
+  --surface-primary: #151f18;
+  --surface-secondary: #1a271e;
+  --surface-hover: #203025;
+
+  --text-primary: #eff7f1;
+  --text-secondary: #a7b5aa;
+  --text-tertiary: #748078;
+
+  --border-color: #28372c;
+
+  --brand-primary: var(--brand-400);
+  --brand-secondary: var(--brand-500);
+  --brand-soft: #173b24;
+}
