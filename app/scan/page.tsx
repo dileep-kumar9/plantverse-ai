@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import Card from "@/components/ui/Card";
 import ImagePreview from "@/components/scan/ImagePreview";
 import ImageUploader from "@/components/scan/ImageUploader";
 import InputMethodSelector from "@/components/scan/InputMethodSelector";
 import ScanStepper from "@/components/scan/ScanStepper";
 import ScanTypeSelector from "@/components/scan/ScanTypeSelector";
+import Card from "@/components/ui/Card";
 
 import type {
   InputMethod,
@@ -28,6 +28,10 @@ export default function ScanPage() {
   const [previewUrl, setPreviewUrl] =
     useState<string | null>(null);
 
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] =
+    useState<string | null>(null);
+
   const hiddenInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -37,6 +41,16 @@ export default function ScanPage() {
       }
     };
   }, [previewUrl]);
+
+  function clearSelectedImage() {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setAnalysisError(null);
+  }
 
   function handleScanTypeSelect(scanType: ScanType) {
     setSelectedType(scanType.id);
@@ -56,54 +70,52 @@ export default function ScanPage() {
 
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
+    setAnalysisError(null);
   }
 
-  function clearSelectedImage() {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-
-    setSelectedFile(null);
-    setPreviewUrl(null);
-  }
-
-  function handleAnalyze() {
-    if (!selectedType || !selectedMethod || !selectedFile) {
+  async function handleAnalyze() {
+    if (!selectedFile || !selectedType) {
       return;
     }
 
-    async function handleAnalyze() {
-  if (!selectedFile || !selectedType) {
-    return;
-  }
+    try {
+      setIsAnalyzing(true);
+      setAnalysisError(null);
 
-  try {
-    const formData = new FormData();
+      const formData = new FormData();
 
-    formData.append("image", selectedFile);
-    formData.append("scanType", selectedType);
+      formData.append("image", selectedFile);
+      formData.append("scanType", selectedType);
 
-    const response = await fetch("/api/analyze", {
-      method: "POST",
-      body: formData,
-    });
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        body: formData,
+      });
 
-    if (!response.ok) {
-      throw new Error("Analysis failed");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Analysis failed.");
+      }
+
+      console.log("PlantVerse analysis result:", data);
+
+      window.alert(
+        "Analysis completed successfully. The result is available in the browser console.",
+      );
+    } catch (error) {
+      console.error("Plant analysis failed:", error);
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Plant analysis failed. Please try again.";
+
+      setAnalysisError(message);
+    } finally {
+      setIsAnalyzing(false);
     }
-
-    const data = await response.json();
-
-    console.log(data);
-
-    alert("Analysis completed. Check browser console.");
-
-  } catch (error) {
-    console.error(error);
-
-    alert("Plant analysis failed.");
   }
-}
 
   const currentStep = selectedFile
     ? 3
@@ -144,7 +156,7 @@ export default function ScanPage() {
                   Selected analysis
                 </p>
 
-                <h2 className="mt-2 text-2xl font-semibold">
+                <h2 className="mt-2 text-2xl font-semibold capitalize">
                   {selectedType}
                 </h2>
 
@@ -191,14 +203,47 @@ export default function ScanPage() {
                 </button>
               </div>
 
+              {analysisError ? (
+                <div
+                  role="alert"
+                  className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+                >
+                  {analysisError}
+                </div>
+              ) : null}
+
               {selectedFile && previewUrl ? (
-                <ImagePreview
-                  file={selectedFile}
-                  previewUrl={previewUrl}
-                  onChangeImage={() => hiddenInputRef.current?.click()}
-                  onRemove={clearSelectedImage}
-                  onAnalyze={handleAnalyze}
-                />
+                <div className="relative">
+                  <ImagePreview
+                    file={selectedFile}
+                    previewUrl={previewUrl}
+                    onChangeImage={() =>
+                      hiddenInputRef.current?.click()
+                    }
+                    onRemove={clearSelectedImage}
+                    onAnalyze={handleAnalyze}
+                  />
+
+                  {isAnalyzing ? (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-3xl bg-black/45 p-6 backdrop-blur-sm">
+                      <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center text-gray-900 shadow-2xl">
+                        <div
+                          className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-green-200 border-t-green-600"
+                          aria-hidden="true"
+                        />
+
+                        <h3 className="mt-5 text-xl font-semibold">
+                          Analyzing image
+                        </h3>
+
+                        <p className="mt-2 text-sm leading-6 text-gray-600">
+                          PlantVerse AI is checking the image and preparing a
+                          structured report.
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               ) : (
                 <ImageUploader onImageSelect={handleImageSelect} />
               )}
