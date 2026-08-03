@@ -1,0 +1,3 @@
+import { NextRequest,NextResponse } from "next/server";
+import { DEVICE_CATALOG } from "@/lib/app-data";
+export async function POST(req:NextRequest){const {query=""}=await req.json(); const q=String(query).toLowerCase(); const exact=DEVICE_CATALOG.find(d=>`${d.brand} ${d.model}`.toLowerCase().includes(q)||q.includes(d.model.toLowerCase())); if(exact)return NextResponse.json({result:exact}); return NextResponse.json({result:{brand:"Unknown",model:String(query),status:"verify",methods:["manual"],features:["Manual readings"],notes:"Manual entry works with any meter. Direct connection requires the model's Bluetooth, Wi-Fi, serial, or cloud protocol documentation."}})}

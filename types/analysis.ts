@@ -1,22 +1,2 @@
-export type AnalysisResult = {
-  plantName: string;
-  localName?: string;
-  scientificName: string;
-  healthScore: number;
-  disease: string;
-  confidence: number;
-  severity: "none" | "mild" | "moderate" | "severe" | "unknown" | string;
-  symptoms: string[];
-  possibleCauses: string[];
-  treatment: string[];
-  prevention: string[];
-  evidenceNeeded: string[];
-  disclaimer: string;
-};
-
-export type SavedAnalysis = AnalysisResult & {
-  id: string;
-  scanType: string;
-  createdAt: string;
-  imageName?: string;
-};
+export type AnalysisResult={plantName:string;localName?:string;scientificName:string;healthScore:number;disease:string;confidence:number;severity:string;symptoms:string[];possibleCauses:string[];treatment:string[];prevention:string[];evidenceNeeded:string[];disclaimer:string;scene?:string;soilType?:string;soilImprovement?:string[];suitablePlants?:string[];growingSpace?:string;roadOrNonGrowingSurface?:boolean;fertilizerSuggestions?:string[];pesticideSuggestions?:string[];wateringAdvice?:string;moistureNote?:string;};
+export type SavedAnalysis=AnalysisResult&{id:string;scanType:string;createdAt:string;imageName?:string};
