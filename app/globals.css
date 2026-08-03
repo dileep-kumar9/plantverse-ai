@@ -565,3 +565,7 @@ button {
   color: white;
   backdrop-filter: blur(14px);
 }
+
+.page-wrap { min-height: 100vh; padding: 2rem 1rem 5rem; max-width: 1240px; margin: 0 auto; }
+@media (min-width: 640px) { .page-wrap { padding-left: 1.5rem; padding-right: 1.5rem; } }
+@media print { header, aside, button { display: none !important; } .page-wrap, main { padding: 0 !important; } }
