@@ -3,10 +3,12 @@
 import { ChevronDown, RotateCcw, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AnalysisResult from "@/components/scan/AnalysisResult";
+import ProcessingPanel from "@/components/scan/ProcessingPanel";
 import EvidencePicker from "@/components/scan/EvidencePicker";
 import ScanStepper from "@/components/scan/ScanStepper";
 import ScanTypeSelector from "@/components/scan/ScanTypeSelector";
 import Card from "@/components/ui/Card";
+import { inspectImageQuality, type ImageQualityReport } from "@/lib/image-quality";
 import type { AnalysisResult as AnalysisData } from "@/types/analysis";
 import { scanTypes, type ScanCategory, type ScanType } from "@/types/scan-wizard";
 
@@ -29,6 +31,7 @@ export default function ScanPage() {
   const [voiceQuestion, setVoiceQuestion] = useState("");
   const [voiceAnswer, setVoiceAnswer] = useState("");
   const [videoResult, setVideoResult] = useState<Record<string, unknown> | null>(null);
+  const [quality, setQuality] = useState<ImageQualityReport | null>(null);
 
   const selectedType = useMemo(() => scanTypes.find((item) => item.id === scanType) ?? null, [scanType]);
 
@@ -43,6 +46,7 @@ export default function ScanPage() {
     setError(null);
     setVoiceQuestion("");
     setVoiceAnswer("");
+    setQuality(null);
   }
 
   function chooseAnalysis(scan: ScanType) {
@@ -55,6 +59,8 @@ export default function ScanPage() {
     setBusy(true);
     setError(null);
     setFile(selectedFile);
+    const qualityReport = await inspectImageQuality(selectedFile);
+    setQuality(qualityReport);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(URL.createObjectURL(selectedFile));
 
@@ -114,6 +120,7 @@ export default function ScanPage() {
       setVoiceAnswer(data.reply || "No answer was returned.");
     } catch (voiceError) {
       setVoiceAnswer("");
+    setQuality(null);
       setError(voiceError instanceof Error ? voiceError.message : "Voice search failed.");
     }
   }
@@ -189,11 +196,15 @@ export default function ScanPage() {
               </div>
             ) : null}
 
-            {busy ? (
-              <div className="mt-6 rounded-3xl bg-[var(--brand-soft)] p-6">
-                <div className="flex items-center gap-3"><div className="h-8 w-8 animate-spin rounded-full border-4 border-green-200 border-t-[var(--brand-primary)]" /><div><h3 className="font-semibold">Inspecting automatically</h3><p className="text-sm text-[var(--text-secondary)]">Applying the {selectedType?.title.toLowerCase()} workflow…</p></div></div>
+            {quality?.warnings.length ? (
+              <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                <h3 className="font-semibold">Image quality suggestions</h3>
+                <ul className="mt-3 space-y-2 text-sm">{quality.warnings.map((warning) => <li key={warning}>• {warning}</li>)}</ul>
+                <p className="mt-3 text-xs opacity-75">PlantVerse continued the inspection, but a clearer image may improve confidence.</p>
               </div>
             ) : null}
+
+            {busy ? <ProcessingPanel analysisName={selectedType?.title || "evidence"} /> : null}
 
             {voiceQuestion ? (
               <div className="mt-6 rounded-3xl border border-[var(--border-color)] p-5">

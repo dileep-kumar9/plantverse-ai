@@ -614,3 +614,35 @@ button {
 .voice-wave i:nth-child(1){height:35%}.voice-wave i:nth-child(2){height:85%;animation-delay:120ms}.voice-wave i:nth-child(3){height:55%;animation-delay:240ms}.voice-wave i:nth-child(4){height:100%;animation-delay:360ms}
 @keyframes voice-wave { to { height: 25%; } }
 @media (min-width:640px){.evidence-main-button,.evidence-voice-button,.voice-listening-button{width:auto}.evidence-main-button{min-width:18rem}.evidence-voice-button,.voice-listening-button{min-width:13rem}}
+
+/* v3.1 focused interaction fixes */
+.voice-panel {
+  right: max(.75rem, env(safe-area-inset-right));
+  bottom: max(5.75rem, calc(env(safe-area-inset-bottom) + 5rem));
+  width: min(calc(100vw - 1.5rem), 390px);
+  max-height: min(72dvh, 620px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.global-ai-button {
+  right: max(.85rem, env(safe-area-inset-right));
+  bottom: max(.85rem, env(safe-area-inset-bottom));
+}
+@media (max-width: 639px) {
+  .voice-panel {
+    left: .75rem;
+    right: .75rem;
+    bottom: max(5.25rem, calc(env(safe-area-inset-bottom) + 4.5rem));
+    width: auto;
+    max-height: calc(100dvh - 6.5rem);
+    border-radius: 1.25rem;
+  }
+  .global-ai-button {
+    bottom: max(1rem, calc(env(safe-area-inset-bottom) + .5rem));
+  }
+  .evidence-menu {
+    width: min(calc(100vw - 2rem), 28rem);
+    max-height: 60dvh;
+    overflow-y: auto;
+  }
+}

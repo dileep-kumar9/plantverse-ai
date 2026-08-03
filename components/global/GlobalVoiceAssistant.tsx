@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, Keyboard, Mic, Send, Sparkles, Volume2, X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export default function GlobalVoiceAssistant() {
   const [open, setOpen] = useState(false);
@@ -9,6 +9,7 @@ export default function GlobalVoiceAssistant() {
   const [text, setText] = useState("");
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
+  const transcriptRef = useRef("");
 
   async function send(message = text) {
     const cleanMessage = message.trim();
@@ -36,19 +37,36 @@ export default function GlobalVoiceAssistant() {
 
   function listen() {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) { alert("Speech recognition is not supported in this browser."); return; }
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
     const recognition = new SpeechRecognition();
     recognition.lang = localStorage.getItem("plantverse-speech-language") || "en-IN";
     recognition.interimResults = true;
     recognition.continuous = false;
+    transcriptRef.current = "";
     recognition.onstart = () => { setOpen(true); setListening(true); setReply(""); };
-    recognition.onend = () => setListening(false);
     recognition.onerror = () => setListening(false);
     recognition.onresult = (event: any) => {
       const transcript = Array.from(event.results).map((result: any) => result[0]?.transcript || "").join(" ").trim();
-      setText(transcript);
+      if (transcript) {
+        transcriptRef.current = transcript;
+        setText(transcript);
+      }
       const final = event.results?.[event.results.length - 1]?.isFinal;
-      if (transcript && final) void send(transcript);
+      if (transcript && final) {
+        transcriptRef.current = "";
+        void send(transcript);
+      }
+    };
+    recognition.onend = () => {
+      setListening(false);
+      const transcript = transcriptRef.current.trim();
+      if (transcript) {
+        transcriptRef.current = "";
+        void send(transcript);
+      }
     };
     recognition.start();
   }
@@ -66,13 +84,13 @@ export default function GlobalVoiceAssistant() {
       </button>
 
       {open ? (
-        <section className="voice-panel">
+        <section className="voice-panel" role="dialog" aria-label="PlantVerse AI assistant">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2"><Sparkles size={18} className="text-[var(--brand-primary)]" /><div><h2 className="font-semibold">PlantVerse AI</h2><p className="text-xs text-[var(--text-secondary)]">Voice auto-submits when recognition finishes</p></div></div>
-            <button onClick={() => setOpen(false)} aria-label="Close assistant"><X size={19} /></button>
+            <div className="flex min-w-0 items-center gap-2"><Sparkles size={18} className="shrink-0 text-[var(--brand-primary)]" /><div className="min-w-0"><h2 className="font-semibold">PlantVerse AI</h2><p className="truncate text-xs text-[var(--text-secondary)]">Voice submits automatically after you finish speaking</p></div></div>
+            <button onClick={() => setOpen(false)} aria-label="Close assistant" className="shrink-0"><X size={19} /></button>
           </div>
 
-          <textarea value={text} onChange={(event) => setText(event.target.value)} rows={3} className="mt-4 w-full rounded-2xl border border-[var(--border-color)] bg-[var(--surface-secondary)] p-3" placeholder="Speak or type from any screen…" />
+          <textarea value={text} onChange={(event) => setText(event.target.value)} rows={3} className="mt-4 w-full resize-none rounded-2xl border border-[var(--border-color)] bg-[var(--surface-secondary)] p-3 outline-none" placeholder="Speak or type from any screen…" />
 
           <div className="mt-3 flex flex-wrap gap-2">
             <button className="outline-button" onClick={listen} disabled={listening}><Mic size={17} />{listening ? "Listening…" : "Speak"}</button>
@@ -81,7 +99,7 @@ export default function GlobalVoiceAssistant() {
             <button className="voice-button" onClick={() => void send()} disabled={busy}><Send size={17} />{busy ? "Searching…" : "Ask AI"}</button>
           </div>
 
-          {reply ? <div className="mt-4 rounded-2xl bg-[var(--surface-secondary)] p-4 text-sm leading-6"><div className="flex justify-end"><button onClick={readReply} aria-label="Read answer aloud"><Volume2 size={17} /></button></div>{reply}</div> : null}
+          {reply ? <div className="mt-4 rounded-2xl bg-[var(--surface-secondary)] p-4 text-sm leading-6"><div className="flex justify-end"><button onClick={readReply} aria-label="Read answer aloud"><Volume2 size={17} /></button></div><div className="whitespace-pre-wrap break-words">{reply}</div></div> : null}
         </section>
       ) : null}
     </>

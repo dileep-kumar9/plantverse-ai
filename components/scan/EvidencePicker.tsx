@@ -3,20 +3,18 @@
 import {
   Camera,
   ChevronDown,
-  FileImage,
   FolderOpen,
   Globe2,
   HardDrive,
   Link2,
   Mic,
   Upload,
-  Video,
   X,
 } from "lucide-react";
 import { useRef, useState } from "react";
 import CameraCapture from "@/components/scan/CameraCapture";
 
-export type EvidenceKind = "camera" | "photos" | "device" | "web" | "drive" | "video" | "voice";
+export type EvidenceKind = "camera" | "device" | "web" | "drive";
 
 type EvidencePickerProps = {
   onImageSelect: (file: File) => void;
@@ -25,12 +23,10 @@ type EvidencePickerProps = {
 };
 
 const sources = [
-  { id: "camera", label: "Take photo or record", icon: Camera },
-  { id: "photos", label: "Photos / gallery", icon: FileImage },
-  { id: "device", label: "This device", icon: HardDrive },
-  { id: "video", label: "Upload video", icon: Video },
-  { id: "web", label: "Image web link", icon: Globe2 },
-  { id: "drive", label: "Google Drive link", icon: FolderOpen },
+  { id: "camera", label: "Open camera", description: "Capture a photo or record a video", icon: Camera },
+  { id: "device", label: "This device", description: "Choose a photo or video; PlantVerse detects it automatically", icon: HardDrive },
+  { id: "web", label: "Web link", description: "Import a public photo or video URL", icon: Globe2 },
+  { id: "drive", label: "Google Drive", description: "Open Drive and paste a public photo or video link", icon: FolderOpen },
 ] as const;
 
 export default function EvidencePicker({ onImageSelect, onVideoSelect, onVoiceComplete }: EvidencePickerProps) {
@@ -41,9 +37,20 @@ export default function EvidencePicker({ onImageSelect, onVideoSelect, onVoiceCo
   const [remoteError, setRemoteError] = useState<string | null>(null);
   const [remoteBusy, setRemoteBusy] = useState(false);
   const [listening, setListening] = useState(false);
-  const photosRef = useRef<HTMLInputElement | null>(null);
   const deviceRef = useRef<HTMLInputElement | null>(null);
-  const videoRef = useRef<HTMLInputElement | null>(null);
+  const finalTranscriptRef = useRef("");
+
+  function routeFile(file: File) {
+    if (file.type.startsWith("image/")) {
+      onImageSelect(file);
+      return;
+    }
+    if (file.type.startsWith("video/")) {
+      onVideoSelect(file);
+      return;
+    }
+    setRemoteError("Choose an image or video file.");
+  }
 
   function startVoice() {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -51,20 +58,34 @@ export default function EvidencePicker({ onImageSelect, onVideoSelect, onVoiceCo
       alert("Speech recognition is not supported in this browser.");
       return;
     }
+
     const recognition = new SpeechRecognition();
     recognition.lang = localStorage.getItem("plantverse-speech-language") || "en-IN";
     recognition.interimResults = true;
     recognition.continuous = false;
+    finalTranscriptRef.current = "";
+
     recognition.onstart = () => setListening(true);
-    recognition.onend = () => setListening(false);
     recognition.onerror = () => setListening(false);
     recognition.onresult = (event: any) => {
       const transcript = Array.from(event.results)
         .map((result: any) => result[0]?.transcript || "")
         .join(" ")
         .trim();
+      if (transcript) finalTranscriptRef.current = transcript;
+
       const final = event.results?.[event.results.length - 1]?.isFinal;
       if (transcript && final) {
+        finalTranscriptRef.current = "";
+        setOpen(false);
+        onVoiceComplete(transcript);
+      }
+    };
+    recognition.onend = () => {
+      setListening(false);
+      const transcript = finalTranscriptRef.current.trim();
+      if (transcript) {
+        finalTranscriptRef.current = "";
         setOpen(false);
         onVoiceComplete(transcript);
       }
@@ -72,7 +93,7 @@ export default function EvidencePicker({ onImageSelect, onVideoSelect, onVoiceCo
     recognition.start();
   }
 
-  async function importRemoteImage() {
+  async function importRemoteMedia() {
     if (!remoteUrl.trim()) return;
     setRemoteBusy(true);
     setRemoteError(null);
@@ -84,30 +105,38 @@ export default function EvidencePicker({ onImageSelect, onVideoSelect, onVoiceCo
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        throw new Error(payload?.error || "Unable to import this image.");
+        throw new Error(payload?.error || "Unable to import this media file.");
       }
+
       const blob = await response.blob();
-      const type = blob.type || "image/jpeg";
-      const extension = type.split("/")[1]?.replace("jpeg", "jpg") || "jpg";
-      onImageSelect(new File([blob], `imported-${Date.now()}.${extension}`, { type }));
+      const type = blob.type || "application/octet-stream";
+      const extension = type.split("/")[1]?.replace("jpeg", "jpg").replace("quicktime", "mov") || "bin";
+      const file = new File([blob], `imported-${Date.now()}.${extension}`, { type });
+      routeFile(file);
       setRemoteUrl("");
       setUrlMode(null);
       setOpen(false);
     } catch (error) {
-      setRemoteError(error instanceof Error ? error.message : "Unable to import image.");
+      setRemoteError(error instanceof Error ? error.message : "Unable to import media.");
     } finally {
       setRemoteBusy(false);
     }
   }
 
   function chooseSource(id: EvidenceKind) {
-    if (id === "camera") { setCameraOpen(true); setOpen(false); return; }
-    if (id === "photos") { photosRef.current?.click(); setOpen(false); return; }
-    if (id === "device") { deviceRef.current?.click(); setOpen(false); return; }
-    if (id === "video") { videoRef.current?.click(); setOpen(false); return; }
+    if (id === "camera") {
+      setCameraOpen(true);
+      setOpen(false);
+      return;
+    }
+    if (id === "device") {
+      deviceRef.current?.click();
+      setOpen(false);
+      return;
+    }
     setRemoteUrl("");
     setRemoteError(null);
-    setUrlMode(id as "web" | "drive");
+    setUrlMode(id);
     setOpen(false);
   }
 
@@ -119,14 +148,18 @@ export default function EvidencePicker({ onImageSelect, onVideoSelect, onVoiceCo
     <section className="relative">
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
-          <button type="button" onClick={() => setOpen((value) => !value)} className="evidence-main-button">
-            <Upload size={20} /> Upload image or video <ChevronDown size={18} />
+          <button type="button" onClick={() => setOpen((value) => !value)} className="evidence-main-button" aria-expanded={open}>
+            <Upload size={20} /> Add photo or video <ChevronDown size={18} />
           </button>
           {open ? (
             <div className="evidence-menu">
-              {sources.map(({ id, label, icon: Icon }) => (
+              {sources.map(({ id, label, description, icon: Icon }) => (
                 <button key={id} type="button" onClick={() => chooseSource(id)} className="evidence-menu-item">
-                  <Icon size={20} /> <span>{label}</span>
+                  <Icon size={20} className="shrink-0" />
+                  <span>
+                    <span className="block">{label}</span>
+                    <span className="mt-0.5 block text-xs font-normal text-[var(--text-secondary)]">{description}</span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -138,32 +171,50 @@ export default function EvidencePicker({ onImageSelect, onVideoSelect, onVoiceCo
       </div>
 
       <p className="mt-3 text-sm text-[var(--text-secondary)]">
-        Captured or selected images are inspected automatically. Voice searches automatically when recognition finishes.
+        One device picker accepts both photos and videos. PlantVerse detects the file type and starts the correct inspection automatically.
       </p>
 
       {urlMode ? (
         <div className="mt-5 rounded-3xl border border-[var(--border-color)] bg-[var(--surface-secondary)] p-5">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="font-semibold">{urlMode === "drive" ? "Google Drive public link" : "Public image web link"}</h3>
+            <div>
+              <h3 className="font-semibold">{urlMode === "drive" ? "Import from Google Drive" : "Import a public web link"}</h3>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">Public image and video files are supported.</p>
+            </div>
             <button type="button" onClick={() => setUrlMode(null)} aria-label="Close"><X size={18} /></button>
           </div>
+
+          {urlMode === "drive" ? (
+            <a href="https://drive.google.com/drive/my-drive" target="_blank" rel="noreferrer" className="outline-button mt-4 inline-flex">
+              <FolderOpen size={18} /> Open Google Drive
+            </a>
+          ) : null}
+
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <label className="flex min-h-12 flex-1 items-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-primary)] px-4">
               <Link2 size={18} className="text-[var(--text-secondary)]" />
-              <input value={remoteUrl} onChange={(event) => setRemoteUrl(event.target.value)} className="min-w-0 flex-1 bg-transparent outline-none" placeholder="https://…" />
+              <input value={remoteUrl} onChange={(event) => setRemoteUrl(event.target.value)} className="min-w-0 flex-1 bg-transparent outline-none" placeholder={urlMode === "drive" ? "Paste a public Google Drive file link" : "Paste a public image or video URL"} />
             </label>
-            <button type="button" onClick={() => void importRemoteImage()} disabled={remoteBusy || !remoteUrl.trim()} className="voice-button">
+            <button type="button" onClick={() => void importRemoteMedia()} disabled={remoteBusy || !remoteUrl.trim()} className="voice-button">
               {remoteBusy ? "Importing…" : "Import & inspect"}
             </button>
           </div>
           {remoteError ? <p className="mt-3 text-sm text-red-600">{remoteError}</p> : null}
-          {urlMode === "drive" ? <p className="mt-3 text-xs text-[var(--text-tertiary)]">Use a publicly accessible Drive file link. Private Drive Picker access requires Google OAuth credentials.</p> : null}
+          {urlMode === "drive" ? <p className="mt-3 text-xs text-[var(--text-tertiary)]">Set the Drive file to “Anyone with the link.” Direct private-file picking requires Google OAuth and Picker credentials.</p> : null}
         </div>
       ) : null}
 
-      <input ref={photosRef} type="file" accept="image/*" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) onImageSelect(file); event.target.value = ""; }} />
-      <input ref={deviceRef} type="file" accept="image/*" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) onImageSelect(file); event.target.value = ""; }} />
-      <input ref={videoRef} type="file" accept="video/*" capture="environment" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) onVideoSelect(file); event.target.value = ""; }} />
+      <input
+        ref={deviceRef}
+        type="file"
+        accept="image/*,video/*"
+        hidden
+        onChange={(event) => {
+          const selectedFile = event.target.files?.[0];
+          if (selectedFile) routeFile(selectedFile);
+          event.target.value = "";
+        }}
+      />
     </section>
   );
 }
