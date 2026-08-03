@@ -1,3 +1,7 @@
+# PlantVerse AI v3
+
+A unified AI-assisted plant, soil, land, device, translation, marketplace, memory, and planning application.
+
 # PlantVerse AI
 
 Integrated Next.js application for plant, soil, land, device and garden intelligence.

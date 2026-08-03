@@ -1,15 +1,219 @@
 "use client";
-import {useEffect,useRef,useState} from "react";
-import AnalysisResult from "@/components/scan/AnalysisResult";import ImagePreview from "@/components/scan/ImagePreview";import ImageUploader from "@/components/scan/ImageUploader";import InputMethodSelector from "@/components/scan/InputMethodSelector";import ScanStepper from "@/components/scan/ScanStepper";import ScanTypeSelector from "@/components/scan/ScanTypeSelector";import Card from "@/components/ui/Card";import type{AnalysisResult as R}from"@/types/analysis";import type{InputMethod,ScanCategory,ScanType}from"@/types/scan-wizard";
-export default function ScanPage(){
- const[type,setType]=useState<ScanCategory|null>(null),[method,setMethod]=useState<InputMethod|null>(null),[file,setFile]=useState<File|null>(null),[url,setUrl]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null),[result,setResult]=useState<R|null>(null),[notes,setNotes]=useState(""),[space,setSpace]=useState("field"),[voice,setVoice]=useState(""),[videoResult,setVideoResult]=useState<any>(null);const hidden=useRef<HTMLInputElement|null>(null),video=useRef<HTMLInputElement|null>(null);
- useEffect(()=>()=>{if(url)URL.revokeObjectURL(url)},[url]);
- function clear(){if(url)URL.revokeObjectURL(url);setFile(null);setUrl(null);setResult(null);setError(null);setVideoResult(null)}
- function selectType(t:ScanType){setType(t.id);setMethod(null);clear()};function selectMethod(m:InputMethod){setMethod(m);clear()};function selectFile(f:File){if(url)URL.revokeObjectURL(url);setFile(f);setUrl(URL.createObjectURL(f));setError(null)}
- function listen(){const W=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;if(!W)return alert("Speech recognition is not supported. Type your explanation instead.");const r=new W();r.lang="en-IN";r.onresult=(e:any)=>setVoice(e.results[0][0].transcript);r.start()}
- async function analyze(){if(!file||!type)return;setBusy(true);setError(null);try{const fd=new FormData();fd.append("image",file);fd.append("scanType",type);fd.append("growingSpace",space);fd.append("notes",notes);const res=await fetch("/api/analyze",{method:"POST",body:fd});const d=await res.json();if(!res.ok)throw new Error(d.error||"Analysis failed");setResult(d.result);localStorage.setItem("plantverse-current-result",JSON.stringify(d.result))}catch(e){setError(e instanceof Error?e.message:"Analysis failed")}finally{setBusy(false)}}
- async function analyzeVideo(f:File){if(!type)return;setBusy(true);setError(null);try{const fd=new FormData();fd.append("video",f);fd.append("scanType",type);fd.append("narration",voice||notes);const res=await fetch("/api/video-analyze",{method:"POST",body:fd});const d=await res.json();if(!res.ok)throw new Error(d.error);setVideoResult(d.result)}catch(e){setError(e instanceof Error?e.message:"Video analysis failed")}finally{setBusy(false)}}
- const step=result||videoResult?5:busy?4:file?3:type?2:1;if(result&&type)return <main className="px-4 py-8 sm:px-6"><div className="mx-auto max-w-6xl"><ScanStepper currentStep={5}/><AnalysisResult result={result} scanType={type} imageName={file?.name} onReset={()=>{setType(null);setMethod(null);clear()}}/></div></main>;
- return <main className="page-wrap"><p className="eyebrow">Photo · video · voice · location</p><h1 className="mt-2 text-4xl font-semibold sm:text-5xl">PlantVerse Smart Scan</h1><p className="mt-3 max-w-3xl text-[var(--text-secondary)]">Analyze a plant, soil, empty land, field, terrace, fruit, flower, tree, pest, device, or visible location. PlantVerse can recognize roads and other non-growing surfaces.</p><Card className="mt-8"><ScanStepper currentStep={step}/></Card><section className="mt-8">
- {!type?<ScanTypeSelector selectedType={type} onSelect={selectType}/>:!method?<><div className="dashboard-panel mb-5"><p className="eyebrow">Selected category</p><h2 className="mt-2 text-2xl font-semibold capitalize">{type}</h2><div className="mt-4 flex flex-wrap gap-2">{["pot","terrace","field","empty-land"].map(x=><button key={x} onClick={()=>setSpace(x)} className={space===x?"voice-button":"outline-button"}>{x}</button>)}</div><textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} className="mt-4 w-full rounded-2xl border border-[var(--border-color)] bg-[var(--surface-secondary)] p-3" placeholder="Optional: explain what you need, symptoms, sunlight, water, land dimensions, or device reading..."/><button className="mt-3 text-sm font-semibold text-[var(--brand-primary)]" onClick={()=>{setType(null);clear()}}>← Change category</button></div><InputMethodSelector selectedMethod={method} onSelect={selectMethod}/></>:method==="camera"||method==="gallery"?<><div className="mb-5 flex justify-between"><div><p className="eyebrow">{space}</p><h2 className="mt-1 text-2xl font-semibold capitalize">{method}</h2></div><button onClick={()=>{setMethod(null);clear()}} className="text-[var(--brand-primary)]">Change method</button></div>{error&&<div className="mb-4 rounded-2xl bg-red-50 p-4 text-red-700">{error}</div>}{file&&url?<div className="relative"><ImagePreview file={file} previewUrl={url} onChangeImage={()=>hidden.current?.click()} onRemove={clear} onAnalyze={analyze}/>{busy&&<div className="absolute inset-0 flex items-center justify-center rounded-3xl bg-black/55"><div className="rounded-3xl bg-white p-7 text-center text-gray-900"><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-green-200 border-t-green-600"/><h3 className="mt-4 text-xl font-semibold">Analyzing evidence</h3><p className="mt-2 text-sm">Checking scene, plant/soil/land condition, risks, and suitable next steps.</p></div></div>}</div>:<ImageUploader onImageSelect={selectFile}/>}<input ref={hidden} hidden type="file" accept="image/*" capture={method==="camera"?"environment":undefined} onChange={e=>{const f=e.target.files?.[0];if(f)selectFile(f);e.target.value=""}}/></>:method==="video"?<div className="dashboard-panel"><div className="text-center text-5xl">🎥</div><h2 className="mt-4 text-center text-2xl font-semibold">Record and explain together</h2><textarea value={voice} onChange={e=>setVoice(e.target.value)} rows={4} className="mt-5 w-full rounded-2xl border border-[var(--border-color)] bg-[var(--surface-secondary)] p-3" placeholder="Explain what you are showing and what you need..."/><div className="mt-4 flex gap-3"><button onClick={listen} className="outline-button">🎤 Speak</button><button onClick={()=>video.current?.click()} className="voice-button">Choose / record video</button></div><input ref={video} hidden type="file" accept="video/*" capture="environment" onChange={e=>{const f=e.target.files?.[0];if(f)analyzeVideo(f)}}/>{busy&&<p className="mt-4">Analyzing video…</p>}{error&&<p className="mt-4 text-red-600">{error}</p>}{videoResult&&<pre className="mt-5 whitespace-pre-wrap rounded-2xl bg-[var(--surface-secondary)] p-4">{JSON.stringify(videoResult,null,2)}</pre>}</div>:<div className="dashboard-panel"><div className="text-center text-5xl">🎤</div><h2 className="mt-4 text-center text-2xl font-semibold">Voice explanation</h2><textarea value={voice} onChange={e=>setVoice(e.target.value)} rows={7} className="mt-5 w-full rounded-2xl border border-[var(--border-color)] bg-[var(--surface-secondary)] p-4" placeholder="Speak or type in English, Telugu, Hindi, or mixed language..."/><div className="mt-4 flex gap-3"><button onClick={listen} className="outline-button">🎤 Speak</button><a href={`/assistant`} className="voice-button" onClick={()=>localStorage.setItem("plantverse-voice-question",voice)}>Continue in AI Assistant</a></div></div>}
- </section></main>}
+
+import { ChevronDown, RotateCcw, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import AnalysisResult from "@/components/scan/AnalysisResult";
+import EvidencePicker from "@/components/scan/EvidencePicker";
+import ScanStepper from "@/components/scan/ScanStepper";
+import ScanTypeSelector from "@/components/scan/ScanTypeSelector";
+import Card from "@/components/ui/Card";
+import type { AnalysisResult as AnalysisData } from "@/types/analysis";
+import { scanTypes, type ScanCategory, type ScanType } from "@/types/scan-wizard";
+
+const spaces = [
+  { id: "pot", label: "Pot" },
+  { id: "terrace", label: "Terrace" },
+  { id: "field", label: "Field" },
+  { id: "empty-land", label: "Empty land" },
+];
+
+export default function ScanPage() {
+  const [scanType, setScanType] = useState<ScanCategory | null>(null);
+  const [space, setSpace] = useState("field");
+  const [notes, setNotes] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<AnalysisData | null>(null);
+  const [voiceQuestion, setVoiceQuestion] = useState("");
+  const [voiceAnswer, setVoiceAnswer] = useState("");
+  const [videoResult, setVideoResult] = useState<Record<string, unknown> | null>(null);
+
+  const selectedType = useMemo(() => scanTypes.find((item) => item.id === scanType) ?? null, [scanType]);
+
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+
+  function clearEvidence() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(null);
+    setPreviewUrl(null);
+    setResult(null);
+    setVideoResult(null);
+    setError(null);
+    setVoiceQuestion("");
+    setVoiceAnswer("");
+  }
+
+  function chooseAnalysis(scan: ScanType) {
+    setScanType(scan.id);
+    clearEvidence();
+  }
+
+  async function analyzeImage(selectedFile: File) {
+    if (!scanType) return;
+    setBusy(true);
+    setError(null);
+    setFile(selectedFile);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(URL.createObjectURL(selectedFile));
+
+    try {
+      const formData = new FormData();
+      formData.append("image", selectedFile);
+      formData.append("scanType", scanType);
+      formData.append("growingSpace", space);
+      formData.append("notes", notes);
+      const response = await fetch("/api/analyze", { method: "POST", body: formData });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Analysis failed.");
+      setResult(data.result);
+      localStorage.setItem("plantverse-current-result", JSON.stringify(data.result));
+    } catch (analysisError) {
+      setError(analysisError instanceof Error ? analysisError.message : "Analysis failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function analyzeVideo(video: File) {
+    if (!scanType) return;
+    setBusy(true);
+    setError(null);
+    setVideoResult(null);
+    try {
+      const formData = new FormData();
+      formData.append("video", video);
+      formData.append("scanType", scanType);
+      formData.append("narration", notes);
+      const response = await fetch("/api/video-analyze", { method: "POST", body: formData });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Video analysis failed.");
+      setVideoResult(data.result);
+      localStorage.setItem("plantverse-current-video-result", JSON.stringify(data.result));
+    } catch (analysisError) {
+      setError(analysisError instanceof Error ? analysisError.message : "Video analysis failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function searchVoice(transcript: string) {
+    setVoiceQuestion(transcript);
+    setVoiceAnswer("Searching…");
+    setError(null);
+    try {
+      const previousResult = JSON.parse(localStorage.getItem("plantverse-current-result") || "null");
+      const response = await fetch("/api/assistant", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: transcript, context: { scanType, growingSpace: space, notes, previousResult } }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Voice search failed.");
+      setVoiceAnswer(data.reply || "No answer was returned.");
+    } catch (voiceError) {
+      setVoiceAnswer("");
+      setError(voiceError instanceof Error ? voiceError.message : "Voice search failed.");
+    }
+  }
+
+  const currentStep = result || videoResult ? 4 : busy ? 3 : scanType ? 2 : 1;
+
+  if (result && scanType) {
+    return (
+      <main className="page-wrap">
+        <ScanStepper currentStep={4} />
+        <AnalysisResult result={result} scanType={scanType} imageName={file?.name} onReset={() => { clearEvidence(); setNotes(""); }} />
+      </main>
+    );
+  }
+
+  return (
+    <main className="page-wrap">
+      <div>
+        <p className="eyebrow">PlantVerse Smart Scan</p>
+        <h1 className="mt-2 text-4xl font-semibold sm:text-5xl">One analysis. One evidence button. Clear results.</h1>
+        <p className="mt-3 max-w-3xl text-[var(--text-secondary)]">Choose the analysis once. Then capture, upload, paste, record, or speak. PlantVerse automatically starts the matching AI inspection.</p>
+      </div>
+
+      <Card className="mt-8"><ScanStepper currentStep={currentStep} /></Card>
+
+      {!scanType ? (
+        <section className="mt-8">
+          <ScanTypeSelector selectedType={null} onSelect={chooseAnalysis} />
+        </section>
+      ) : (
+        <section className="mt-8 grid gap-6 lg:grid-cols-[0.34fr_0.66fr]">
+          <aside className="dashboard-panel h-fit">
+            <div className="flex items-start gap-4">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-3xl" style={{ backgroundColor: `${selectedType?.accent}18` }}>{selectedType?.icon}</span>
+              <div className="min-w-0">
+                <p className="eyebrow">Selected analysis</p>
+                <h2 className="mt-1 text-2xl font-semibold">{selectedType?.title}</h2>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">{selectedType?.description}</p>
+              </div>
+            </div>
+            <button type="button" className="mt-5 text-sm font-semibold text-[var(--brand-primary)]" onClick={() => { setScanType(null); clearEvidence(); }}>Change analysis</button>
+
+            <label className="relative mt-6 block">
+              <span className="mb-2 block text-sm font-semibold">Growing context</span>
+              <select value={space} onChange={(event) => setSpace(event.target.value)} className="min-h-12 w-full appearance-none rounded-2xl border border-[var(--border-color)] bg-[var(--surface-secondary)] px-4 pr-10 outline-none">
+                {spaces.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              </select>
+              <ChevronDown size={17} className="pointer-events-none absolute bottom-4 right-4 text-[var(--text-secondary)]" />
+            </label>
+
+            <label className="mt-5 block">
+              <span className="text-sm font-semibold">Optional explanation</span>
+              <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-[var(--border-color)] bg-[var(--surface-secondary)] p-4 outline-none focus:border-[var(--brand-primary)]" placeholder="Symptoms, watering, sunlight, land size, meter reading, or what you need…" />
+            </label>
+          </aside>
+
+          <div className="dashboard-panel">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div><p className="eyebrow">Add evidence</p><h2 className="mt-1 text-2xl font-semibold">Use one simple evidence control</h2></div>
+              {file || videoResult || voiceQuestion ? <button type="button" onClick={clearEvidence} className="outline-button"><RotateCcw size={17} /> Start over</button> : null}
+            </div>
+
+            {error ? <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div> : null}
+
+            <div className="mt-6">
+              <EvidencePicker onImageSelect={(selectedFile) => void analyzeImage(selectedFile)} onVideoSelect={(video) => void analyzeVideo(video)} onVoiceComplete={(transcript) => void searchVoice(transcript)} />
+            </div>
+
+            {previewUrl ? (
+              <div className="mt-6 overflow-hidden rounded-3xl border border-[var(--border-color)] bg-[var(--surface-secondary)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={previewUrl} alt="Evidence preview" className="max-h-[430px] w-full object-contain" />
+              </div>
+            ) : null}
+
+            {busy ? (
+              <div className="mt-6 rounded-3xl bg-[var(--brand-soft)] p-6">
+                <div className="flex items-center gap-3"><div className="h-8 w-8 animate-spin rounded-full border-4 border-green-200 border-t-[var(--brand-primary)]" /><div><h3 className="font-semibold">Inspecting automatically</h3><p className="text-sm text-[var(--text-secondary)]">Applying the {selectedType?.title.toLowerCase()} workflow…</p></div></div>
+              </div>
+            ) : null}
+
+            {voiceQuestion ? (
+              <div className="mt-6 rounded-3xl border border-[var(--border-color)] p-5">
+                <div className="flex items-center gap-2 font-semibold"><Sparkles size={18} className="text-[var(--brand-primary)]" /> Voice search completed automatically</div>
+                <p className="mt-3 text-sm text-[var(--text-secondary)]">“{voiceQuestion}”</p>
+                {voiceAnswer ? <div className="mt-4 rounded-2xl bg-[var(--surface-secondary)] p-4 text-sm leading-7">{voiceAnswer}</div> : null}
+              </div>
+            ) : null}
+
+            {videoResult ? (
+              <div className="mt-6 rounded-3xl border border-[var(--border-color)] p-5">
+                <h3 className="font-semibold">Video inspection result</h3>
+                <div className="mt-4 grid gap-3 text-sm">
+                  {Object.entries(videoResult).map(([key, value]) => <div key={key} className="rounded-2xl bg-[var(--surface-secondary)] p-4"><p className="font-semibold capitalize">{key.replaceAll("_", " ")}</p><p className="mt-2 whitespace-pre-wrap text-[var(--text-secondary)]">{Array.isArray(value) ? value.join("\n• ") : String(value)}</p></div>)}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      )}
+    </main>
+  );
+}
