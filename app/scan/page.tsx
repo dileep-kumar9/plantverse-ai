@@ -1,145 +1,228 @@
 "use client";
 
-import { useState } from "react";
-import ScanModeCard from "@/components/scan/ScanModeCard";
-import type { ScanMode } from "@/types/scan";
+import { useEffect, useRef, useState } from "react";
 
-const scanModes: ScanMode[] = [
-  {
-    id: "plant",
-    title: "🌿 Plant Doctor",
-    description:
-      "Identify plants, detect diseases and receive treatment suggestions.",
-    icon: "🌿",
-    features: [
-      "Plant identification",
-      "Disease detection",
-      "Treatment recommendations",
-    ],
-  },
-  {
-    id: "soil",
-    title: "🌱 Soil Expert",
-    description:
-      "Analyze soil quality and receive recommendations for improvement.",
-    icon: "🌱",
-    features: [
-      "Soil analysis",
-      "Nutrient suggestions",
-      "Crop compatibility",
-    ],
-  },
-  {
-    id: "land",
-    title: "🌾 Land Planner",
-    description:
-      "Analyze empty land and discover suitable crops and layouts.",
-    icon: "🌾",
-    features: [
-      "Land analysis",
-      "Crop planning",
-      "Garden layouts",
-    ],
-  },
-  {
-    id: "video",
-    title: "🎥 Video AI",
-    description:
-      "Upload or record videos for advanced AI inspection.",
-    icon: "🎥",
-    features: [
-      "Video analysis",
-      "Timeline detection",
-      "AI observations",
-    ],
-  },
-  {
-    id: "voice",
-    title: "🎤 Voice Assistant",
-    description:
-      "Talk naturally with PlantVerse AI in your preferred language.",
-    icon: "🎤",
-    features: [
-      "Voice input",
-      "Ask questions",
-      "AI conversations",
-    ],
-  },
-  {
-    id: "device",
-    title: "📡 Device Checker",
-    description:
-      "Verify sensor and smart farming device compatibility.",
-    icon: "📡",
-    features: [
-      "Bluetooth support",
-      "Device compatibility",
-      "Manual readings",
-    ],
-  },
-  {
-    id: "translator",
-    title: "🌐 Plant Translator",
-    description:
-      "Translate plant names, reports and selected text.",
-    icon: "🌐",
-    features: [
-      "Plant name translation",
-      "Report translation",
-      "Text selection translation",
-    ],
-  },
-];
+import Card from "@/components/ui/Card";
+import ImagePreview from "@/components/scan/ImagePreview";
+import ImageUploader from "@/components/scan/ImageUploader";
+import InputMethodSelector from "@/components/scan/InputMethodSelector";
+import ScanStepper from "@/components/scan/ScanStepper";
+import ScanTypeSelector from "@/components/scan/ScanTypeSelector";
+
+import type {
+  InputMethod,
+  ScanCategory,
+  ScanType,
+} from "@/types/scan-wizard";
 
 export default function ScanPage() {
-  const [selectedMode, setSelectedMode] = useState<ScanMode | null>(null);
+  const [selectedType, setSelectedType] =
+    useState<ScanCategory | null>(null);
+
+  const [selectedMethod, setSelectedMethod] =
+    useState<InputMethod | null>(null);
+
+  const [selectedFile, setSelectedFile] =
+    useState<File | null>(null);
+
+  const [previewUrl, setPreviewUrl] =
+    useState<string | null>(null);
+
+  const hiddenInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  function handleScanTypeSelect(scanType: ScanType) {
+    setSelectedType(scanType.id);
+    setSelectedMethod(null);
+    clearSelectedImage();
+  }
+
+  function handleMethodSelect(method: InputMethod) {
+    setSelectedMethod(method);
+    clearSelectedImage();
+  }
+
+  function handleImageSelect(file: File) {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function clearSelectedImage() {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    setSelectedFile(null);
+    setPreviewUrl(null);
+  }
+
+  function handleAnalyze() {
+    if (!selectedType || !selectedMethod || !selectedFile) {
+      return;
+    }
+
+    console.log({
+      scanType: selectedType,
+      inputMethod: selectedMethod,
+      file: selectedFile.name,
+    });
+  }
+
+  const currentStep = selectedFile
+    ? 3
+    : selectedType
+      ? 2
+      : 1;
+
+  const supportsImageUpload =
+    selectedMethod === "gallery" ||
+    selectedMethod === "camera";
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-7xl px-5 py-8">
+    <main className="min-h-screen bg-[var(--app-background)] px-4 py-8 text-[var(--text-primary)] sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+          PlantVerse Smart Scan
+        </h1>
 
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold text-gray-900">
-            AI Workspace
-          </h1>
+        <p className="mt-3 max-w-2xl text-[var(--text-secondary)]">
+          Choose what you want to inspect, select an input method, and preview
+          the evidence before starting AI analysis.
+        </p>
 
-          <p className="mt-3 max-w-2xl text-gray-600">
-            Select one AI mode to begin. PlantVerse will guide you
-            step-by-step throughout the process.
-          </p>
-        </div>
+        <Card className="mt-8">
+          <ScanStepper currentStep={currentStep} />
+        </Card>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {scanModes.map((mode) => (
-            <ScanModeCard
-              key={mode.id}
-              mode={mode}
-              selected={selectedMode?.id === mode.id}
-              onSelect={setSelectedMode}
+        <section className="mt-10">
+          {!selectedType ? (
+            <ScanTypeSelector
+              selectedType={selectedType}
+              onSelect={handleScanTypeSelect}
             />
-          ))}
-        </div>
+          ) : !selectedMethod ? (
+            <>
+              <div className="mb-6 rounded-3xl border border-[var(--border-color)] bg-[var(--surface-primary)] p-5">
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Selected analysis
+                </p>
 
-        {selectedMode && (
-          <div className="mt-10 rounded-3xl bg-white p-8 shadow-lg">
+                <h2 className="mt-2 text-2xl font-semibold">
+                  {selectedType}
+                </h2>
 
-            <h2 className="text-2xl font-bold">
-              {selectedMode.icon} {selectedMode.title}
-            </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedType(null);
+                    setSelectedMethod(null);
+                    clearSelectedImage();
+                  }}
+                  className="mt-4 text-sm font-semibold text-[var(--brand-primary)]"
+                >
+                  ← Change scan type
+                </button>
+              </div>
 
-            <p className="mt-3 text-gray-600">
-              {selectedMode.description}
-            </p>
+              <InputMethodSelector
+                selectedMethod={selectedMethod}
+                onSelect={handleMethodSelect}
+              />
+            </>
+          ) : supportsImageUpload ? (
+            <>
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Selected input
+                  </p>
 
-            <button
-              className="mt-8 rounded-xl bg-green-600 px-6 py-3 font-semibold text-white transition hover:bg-green-700"
-            >
-              Continue →
-            </button>
+                  <h2 className="mt-1 text-2xl font-semibold capitalize">
+                    {selectedMethod}
+                  </h2>
+                </div>
 
-          </div>
-        )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedMethod(null);
+                    clearSelectedImage();
+                  }}
+                  className="text-sm font-semibold text-[var(--brand-primary)]"
+                >
+                  Change input method
+                </button>
+              </div>
 
+              {selectedFile && previewUrl ? (
+                <ImagePreview
+                  file={selectedFile}
+                  previewUrl={previewUrl}
+                  onChangeImage={() => hiddenInputRef.current?.click()}
+                  onRemove={clearSelectedImage}
+                  onAnalyze={handleAnalyze}
+                />
+              ) : (
+                <ImageUploader onImageSelect={handleImageSelect} />
+              )}
+
+              <input
+                ref={hiddenInputRef}
+                type="file"
+                accept="image/*"
+                capture={
+                  selectedMethod === "camera"
+                    ? "environment"
+                    : undefined
+                }
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+
+                  if (file) {
+                    handleImageSelect(file);
+                  }
+
+                  event.target.value = "";
+                }}
+              />
+            </>
+          ) : (
+            <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-primary)] p-8 text-center">
+              <div className="text-5xl">
+                {selectedMethod === "video" ? "🎥" : "🎤"}
+              </div>
+
+              <h2 className="mt-5 text-2xl font-semibold capitalize">
+                {selectedMethod} input
+              </h2>
+
+              <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+                The video and voice recording interfaces will be connected in
+                the next step.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setSelectedMethod(null)}
+                className="mt-6 text-sm font-semibold text-[var(--brand-primary)]"
+              >
+                ← Change input method
+              </button>
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
