@@ -1,25 +1,37 @@
+import AITips from "@/components/dashboard/AITips";
 import DashboardHero from "@/components/dashboard/DashboardHero";
+import FloatingCopilot from "@/components/dashboard/FloatingCopilot";
 import GardenHealth from "@/components/dashboard/GardenHealth";
 import QuickActions from "@/components/dashboard/QuickActions";
+import RecentActivity from "@/components/dashboard/RecentActivity";
 import RecentPlants from "@/components/dashboard/RecentPlants";
-import AITips from "@/components/dashboard/AITips";
-import FloatingCopilot from "@/components/dashboard/FloatingCopilot";
+import SearchBar from "@/components/dashboard/SearchBar";
+import TaskList from "@/components/dashboard/TaskList";
+import WeatherWidget from "@/components/dashboard/WeatherWidget";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-[var(--app-background)]">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <SearchBar />
 
         <DashboardHero />
 
-        <GardenHealth />
+        <section className="mt-8 grid gap-6 lg:grid-cols-2">
+          <WeatherWidget />
+          <GardenHealth />
+        </section>
 
         <QuickActions />
+
+        <section className="mt-10 grid gap-6 lg:grid-cols-2">
+          <TaskList />
+          <RecentActivity />
+        </section>
 
         <RecentPlants />
 
         <AITips />
-
       </div>
 
       <FloatingCopilot />
