@@ -72,12 +72,38 @@ export default function ScanPage() {
       return;
     }
 
-    console.log({
-      scanType: selectedType,
-      inputMethod: selectedMethod,
-      file: selectedFile.name,
-    });
+    async function handleAnalyze() {
+  if (!selectedFile || !selectedType) {
+    return;
   }
+
+  try {
+    const formData = new FormData();
+
+    formData.append("image", selectedFile);
+    formData.append("scanType", selectedType);
+
+    const response = await fetch("/api/analyze", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("Analysis failed");
+    }
+
+    const data = await response.json();
+
+    console.log(data);
+
+    alert("Analysis completed. Check browser console.");
+
+  } catch (error) {
+    console.error(error);
+
+    alert("Plant analysis failed.");
+  }
+}
 
   const currentStep = selectedFile
     ? 3
