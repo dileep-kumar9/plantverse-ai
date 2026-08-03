@@ -3,55 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
 
-const responseSchema = {
-  type: "object",
-  properties: {
-    plantName: { type: "string" },
-    scientificName: { type: "string" },
-    healthScore: { type: "number" },
-    disease: { type: "string" },
-    confidence: { type: "number" },
-    severity: {
-      type: "string",
-      enum: ["none", "mild", "moderate", "severe", "unknown"],
-    },
-    symptoms: {
-      type: "array",
-      items: { type: "string" },
-    },
-    possibleCauses: {
-      type: "array",
-      items: { type: "string" },
-    },
-    treatment: {
-      type: "array",
-      items: { type: "string" },
-    },
-    prevention: {
-      type: "array",
-      items: { type: "string" },
-    },
-    evidenceNeeded: {
-      type: "array",
-      items: { type: "string" },
-    },
-    disclaimer: { type: "string" },
-  },
-  required: [
-    "plantName",
-    "scientificName",
-    "healthScore",
-    "disease",
-    "confidence",
-    "severity",
-    "symptoms",
-    "possibleCauses",
-    "treatment",
-    "prevention",
-    "evidenceNeeded",
-    "disclaimer",
-  ],
-};
+export async function GET() {
+  return NextResponse.json({
+    route: "PlantVerse analysis API",
+    configured: Boolean(process.env.GEMINI_API_KEY),
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,7 +16,10 @@ export async function POST(request: NextRequest) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Gemini API key is not configured." },
+        {
+          error:
+            "GEMINI_API_KEY is missing in Vercel Environment Variables.",
+        },
         { status: 500 },
       );
     }
@@ -108,17 +68,30 @@ export async function POST(request: NextRequest) {
             },
             {
               text: `
-You are PlantVerse AI, a cautious plant and agriculture visual assistant.
+Analyze this image for this PlantVerse scan category: ${scanType}.
 
-Analyze this image for the selected scan type: ${scanType}.
+Return only valid JSON using this structure:
 
-Requirements:
+{
+  "plantName": "",
+  "scientificName": "",
+  "healthScore": 0,
+  "disease": "",
+  "confidence": 0,
+  "severity": "none",
+  "symptoms": [],
+  "possibleCauses": [],
+  "treatment": [],
+  "prevention": [],
+  "evidenceNeeded": [],
+  "disclaimer": ""
+}
+
+Rules:
+- Scores must be between 0 and 100.
 - Do not invent certainty.
-- If the image is unclear, unrelated, or insufficient, explain what additional evidence is needed.
-- Keep healthScore and confidence between 0 and 100.
-- Avoid presenting pesticide or treatment advice as guaranteed.
-- Include practical, low-risk next steps.
-- Include a disclaimer recommending local agricultural or horticultural expert confirmation for serious cases.
+- If the image is unclear or unrelated, explain that in evidenceNeeded.
+- Give cautious, low-risk recommendations.
 `,
             },
           ],
@@ -126,26 +99,46 @@ Requirements:
       ],
       config: {
         responseMimeType: "application/json",
-        responseJsonSchema: responseSchema,
         temperature: 0.2,
       },
     });
 
-    if (!response.text) {
+    const responseText = response.text;
+
+    if (!responseText) {
       return NextResponse.json(
         { error: "Gemini returned an empty response." },
         { status: 502 },
       );
     }
 
-    const result = JSON.parse(response.text);
+    let result: unknown;
+
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      return NextResponse.json(
+        {
+          error: "Gemini returned invalid JSON.",
+          rawResponse: responseText,
+        },
+        { status: 502 },
+      );
+    }
 
     return NextResponse.json({ result });
   } catch (error) {
-    console.error("Plant analysis failed:", error);
+    console.error("Gemini analysis error:", error);
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : String(error);
 
     return NextResponse.json(
-      { error: "Plant analysis failed. Please try another image." },
+      {
+        error: `Gemini request failed: ${message}`,
+      },
       { status: 500 },
     );
   }
