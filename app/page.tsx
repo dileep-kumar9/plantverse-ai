@@ -15,7 +15,7 @@ export default function Home() {
         <SearchBar />
         <DashboardHero />
 
-        <section className="mt-8 grid items-stretch gap-6 lg:grid-cols-2">
+        <section className="mt-8 grid items-start gap-6 lg:grid-cols-2">
           <WeatherWidget />
           <GardenHealth />
         </section>

@@ -1,58 +1,101 @@
-import Card from "@/components/ui/Card";
+import Link from "next/link";
 import Badge from "@/components/ui/Badge";
+import Card from "@/components/ui/Card";
 
-const activity = [
+const plants = [
   {
     id: 1,
-    icon: "📷",
-    title: "Tomato scanned",
-    subtitle: "Healthy",
-    time: "10 minutes ago",
+    icon: "🍅",
+    name: "Tomato",
+    scientificName: "Solanum lycopersicum",
+    status: "Healthy",
+    lastChecked: "10 minutes ago",
   },
   {
     id: 2,
-    icon: "🌱",
-    title: "Soil analyzed",
-    subtitle: "Moisture 72%",
-    time: "Yesterday",
+    icon: "🌿",
+    name: "Aloe Vera",
+    scientificName: "Aloe barbadensis",
+    status: "Healthy",
+    lastChecked: "2 days ago",
   },
   {
     id: 3,
-    icon: "🌿",
-    title: "Aloe Vera checked",
-    subtitle: "No disease detected",
-    time: "2 days ago",
+    icon: "🪴",
+    name: "Money Plant",
+    scientificName: "Epipremnum aureum",
+    status: "Needs attention",
+    lastChecked: "4 days ago",
   },
 ];
 
-export default function RecentActivity() {
+export default function RecentPlants() {
   return (
-    <Card className="h-full">
-      <Badge>Recent Activity</Badge>
+    <section className="mt-10" aria-labelledby="recent-plants-title">
+      <div className="mb-5 flex items-end justify-between gap-4">
+        <div>
+          <Badge>Recent plants</Badge>
 
-      <div className="mt-6 space-y-5">
-        {activity.map((item) => (
-          <div key={item.id} className="flex gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--brand-soft)] text-2xl">
-              {item.icon}
-            </div>
+          <h2
+            id="recent-plants-title"
+            className="mt-3 text-2xl font-semibold tracking-tight"
+          >
+            Recently checked plants
+          </h2>
 
-            <div className="flex-1">
-              <p className="font-semibold">
-                {item.title}
-              </p>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Continue monitoring your recently saved plants.
+          </p>
+        </div>
 
-              <p className="text-sm text-[var(--text-secondary)]">
-                {item.subtitle}
-              </p>
-
-              <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-                {item.time}
-              </p>
-            </div>
-          </div>
-        ))}
+        <Link
+          href="/plants"
+          className="shrink-0 text-sm font-semibold text-[var(--brand-primary)] hover:underline"
+        >
+          View all
+        </Link>
       </div>
-    </Card>
+
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {plants.map((plant) => {
+          const needsAttention = plant.status === "Needs attention";
+
+          return (
+            <Card key={plant.id} interactive className="h-full">
+              <div className="flex items-start gap-4">
+                <div
+                  className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[var(--brand-soft)] text-2xl"
+                  aria-hidden="true"
+                >
+                  {plant.icon}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold">{plant.name}</h3>
+
+                  <p className="mt-1 truncate text-xs italic text-[var(--text-tertiary)]">
+                    {plant.scientificName}
+                  </p>
+
+                  <span
+                    className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                      needsAttention
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                        : "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300"
+                    }`}
+                  >
+                    {plant.status}
+                  </span>
+                </div>
+              </div>
+
+              <p className="mt-5 text-xs text-[var(--text-tertiary)]">
+                Last checked: {plant.lastChecked}
+              </p>
+            </Card>
+          );
+        })}
+      </div>
+    </section>
   );
 }
