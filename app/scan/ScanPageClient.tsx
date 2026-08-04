@@ -11,10 +11,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import {
-  useRouter,
-  useSearchParams,
-} from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import AnalysisResult from "@/components/scan/AnalysisResult";
 import EvidencePicker from "@/components/scan/EvidencePicker";
@@ -83,9 +80,12 @@ function parseSavedReport(
   }
 }
 
-export default function ScanPageClient() {
+export default function ScanPageClient({
+  viewSaved,
+}: {
+  viewSaved: boolean;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const serializedSavedReport = useSyncExternalStore(
     subscribeToSavedReport,
@@ -102,8 +102,7 @@ export default function ScanPageClient() {
   );
 
   const isViewingSavedReport =
-    searchParams.get("view") === "saved" &&
-    savedReport !== null;
+    viewSaved && savedReport !== null;
 
   const [scanType, setScanType] =
     useState<ScanCategory | null>(null);

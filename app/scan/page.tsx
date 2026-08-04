@@ -1,29 +1,19 @@
-import { Suspense } from "react";
-
 import ScanPageClient from "./ScanPageClient";
 
-function ScanPageFallback() {
-  return (
-    <main className="page-wrap">
-      <div className="dashboard-panel">
-        <p className="eyebrow">PlantVerse Smart Scan</p>
+type ScanPageProps = {
+  searchParams: Promise<{
+    view?: string | string[];
+  }>;
+};
 
-        <h1 className="mt-2 text-3xl font-semibold">
-          Loading Smart Scan…
-        </h1>
+export default async function ScanPage({
+  searchParams,
+}: ScanPageProps) {
+  const { view } = await searchParams;
 
-        <p className="mt-3 text-[var(--text-secondary)]">
-          Preparing your scan workspace.
-        </p>
-      </div>
-    </main>
-  );
-}
+  const viewSaved = Array.isArray(view)
+    ? view.includes("saved")
+    : view === "saved";
 
-export default function ScanPage() {
-  return (
-    <Suspense fallback={<ScanPageFallback />}>
-      <ScanPageClient />
-    </Suspense>
-  );
+  return <ScanPageClient viewSaved={viewSaved} />;
 }
