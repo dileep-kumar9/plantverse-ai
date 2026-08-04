@@ -6,6 +6,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
+  Suspense,
   useEffect,
   useMemo,
   useState,
@@ -707,5 +708,31 @@ export default function ScanPage() {
         </section>
       )}
     </main>
+  );
+}
+
+function ScanPageFallback() {
+  return (
+    <main className="page-wrap">
+      <div className="dashboard-panel">
+        <p className="eyebrow">PlantVerse Smart Scan</p>
+
+        <h1 className="mt-2 text-3xl font-semibold">
+          Loading Smart Scan…
+        </h1>
+
+        <p className="mt-3 text-[var(--text-secondary)]">
+          Preparing your scan workspace.
+        </p>
+      </div>
+    </main>
+  );
+}
+
+function ScanPageContent() {
+  return (
+    <Suspense fallback={<ScanPageFallback />}>
+      <ScanPageContent />
+    </Suspense>
   );
 }
