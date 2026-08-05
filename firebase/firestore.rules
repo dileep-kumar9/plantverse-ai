@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // PlantVerse accesses Firestore from authenticated server routes using a
+    // service account. Browser SDK access is intentionally denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

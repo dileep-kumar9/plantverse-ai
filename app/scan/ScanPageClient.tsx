@@ -5,12 +5,7 @@ import {
   RotateCcw,
   Sparkles,
 } from "lucide-react";
-import {
-  useEffect,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import AnalysisResult from "@/components/scan/AnalysisResult";
@@ -23,10 +18,7 @@ import {
   inspectImageQuality,
   type ImageQualityReport,
 } from "@/lib/image-quality";
-import {
-  readStore,
-  writeStore,
-} from "@/lib/local-store";
+import { getRecord } from "@/lib/client-api";
 import type {
   AnalysisResult as AnalysisData,
   SavedAnalysis,
@@ -44,65 +36,15 @@ const spaces = [
   { id: "empty-land", label: "Empty land" },
 ];
 
-function subscribeToSavedReport() {
-  return () => {};
-}
-
-function getSavedReportSnapshot() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return (
-    window.localStorage.getItem(
-      "plantverse-current-result",
-    ) ?? ""
-  );
-}
-
-function getSavedReportServerSnapshot() {
-  return "";
-}
-
-function parseSavedReport(
-  serializedReport: string,
-): SavedAnalysis | null {
-  if (!serializedReport) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(
-      serializedReport,
-    ) as SavedAnalysis;
-  } catch {
-    return null;
-  }
-}
-
 export default function ScanPageClient({
-  viewSaved,
+  reportId,
 }: {
-  viewSaved: boolean;
+  reportId?: string;
 }) {
   const router = useRouter();
-
-  const serializedSavedReport = useSyncExternalStore(
-    subscribeToSavedReport,
-    getSavedReportSnapshot,
-    getSavedReportServerSnapshot,
-  );
-
-  const savedReport = useMemo(
-    () =>
-      parseSavedReport(
-        serializedSavedReport,
-      ),
-    [serializedSavedReport],
-  );
-
-  const isViewingSavedReport =
-    viewSaved && savedReport !== null;
+  const [savedReport, setSavedReport] = useState<SavedAnalysis | null>(null);
+  const [savedReportLoading, setSavedReportLoading] = useState(Boolean(reportId));
+  const [savedReportError, setSavedReportError] = useState<string | null>(null);
 
   const [scanType, setScanType] =
     useState<ScanCategory | null>(null);
@@ -136,6 +78,28 @@ export default function ScanPageClient({
     [scanType],
   );
 
+  useEffect(() => {
+    if (!reportId) return;
+    let active = true;
+    setSavedReportLoading(true);
+    setSavedReportError(null);
+    void getRecord<SavedAnalysis>("analyses", reportId)
+      .then((record) => {
+        if (!active) return;
+        setSavedReport(record);
+        if (!record) setSavedReportError("Saved report not found.");
+      })
+      .catch((requestError) => {
+        if (active) setSavedReportError(requestError instanceof Error ? requestError.message : "Unable to load report.");
+      })
+      .finally(() => {
+        if (active) setSavedReportLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [reportId]);
+
   useEffect(
     () => () => {
       if (previewUrl) {
@@ -161,9 +125,6 @@ export default function ScanPageClient({
   }
 
   function clearSavedReportAndReturn() {
-    window.localStorage.removeItem(
-      "plantverse-current-result",
-    );
     router.replace("/scan");
   }
 
@@ -228,9 +189,9 @@ export default function ScanPageClient({
 
       setResult(data.result);
 
-      writeStore(
+      window.sessionStorage.setItem(
         "plantverse-current-result",
-        data.result,
+        JSON.stringify(data.result),
       );
     } catch (analysisError) {
       setError(
@@ -284,9 +245,9 @@ export default function ScanPageClient({
 
       setVideoResult(data.result);
 
-      writeStore(
+      window.sessionStorage.setItem(
         "plantverse-current-video-result",
-        data.result,
+        JSON.stringify(data.result),
       );
     } catch (analysisError) {
       setError(
@@ -307,11 +268,16 @@ export default function ScanPageClient({
     setError(null);
 
     try {
-      const previousResult =
-        readStore<AnalysisData | null>(
-          "plantverse-current-result",
-          null,
-        );
+      let previousResult: AnalysisData | null = result;
+      if (!previousResult) {
+        try {
+          previousResult = JSON.parse(
+            window.sessionStorage.getItem("plantverse-current-result") || "null",
+          ) as AnalysisData | null;
+        } catch {
+          previousResult = null;
+        }
+      }
 
       const response = await fetch(
         "/api/assistant",
@@ -369,10 +335,27 @@ export default function ScanPageClient({
           ? 2
           : 1;
 
-  if (
-    isViewingSavedReport &&
-    savedReport
-  ) {
+  if (reportId && savedReportLoading) {
+    return (
+      <main className="page-wrap">
+        <div className="dashboard-panel mt-8">Loading saved report…</div>
+      </main>
+    );
+  }
+
+  if (reportId && savedReportError) {
+    return (
+      <main className="page-wrap">
+        <div className="dashboard-panel mt-8">
+          <p className="font-semibold">Unable to open report</p>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">{savedReportError}</p>
+          <button type="button" onClick={clearSavedReportAndReturn} className="outline-button mt-5">Back to Smart Scan</button>
+        </div>
+      </main>
+    );
+  }
+
+  if (reportId && savedReport) {
     return (
       <main className="page-wrap">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-[var(--border-color)] bg-[var(--surface-primary)] p-5">
@@ -406,9 +389,8 @@ export default function ScanPageClient({
           result={savedReport}
           scanType={savedReport.scanType}
           imageName={savedReport.imageName}
-          onReset={
-            clearSavedReportAndReturn
-          }
+          onReset={clearSavedReportAndReturn}
+          savedId={savedReport.id}
         />
       </main>
     );

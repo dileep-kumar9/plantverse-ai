@@ -11,10 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import {
-  readStore,
-  writeStore,
-} from "@/lib/local-store";
+import { createRecord } from "@/lib/client-api";
 import type {
   AnalysisResult,
   SavedAnalysis,
@@ -120,57 +117,50 @@ export default function AnalysisResult({
   scanType,
   imageName,
   onReset,
+  savedId,
 }: {
   result: AnalysisResult;
   scanType: string;
   imageName?: string;
   onReset: () => void;
+  savedId?: string;
 }) {
   const [growingSpace, setGrowingSpace] =
     useState(
       result.growingSpace || "field",
     );
 
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState(Boolean(savedId));
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  function saveAnalysis() {
-    const existing =
-      readStore<SavedAnalysis[]>(
-        "plantverse-analyses",
-        [],
-      );
-
-    const item: SavedAnalysis = {
-      ...result,
-      growingSpace,
-      id: crypto.randomUUID(),
-      scanType,
-      imageName,
-      createdAt: new Date().toISOString(),
-    };
-
-    writeStore(
-      "plantverse-analyses",
-      [item, ...existing],
-    );
-
-    writeStore(
-      "plantverse-current-result",
-      item,
-    );
-
-    setSaved(true);
+  async function saveAnalysis() {
+    if (saved || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const item: Omit<SavedAnalysis, "id"> = {
+        ...result,
+        growingSpace,
+        scanType,
+        imageName,
+        createdAt: new Date().toISOString(),
+      };
+      const created = await createRecord("analyses", item as unknown as Record<string, unknown>);
+      window.sessionStorage.setItem("plantverse-current-result", JSON.stringify(created));
+      setSaved(true);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Unable to save this report.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function goTo(path: string) {
-    writeStore(
+    window.sessionStorage.setItem(
       "plantverse-current-result",
-      {
-        ...result,
-        growingSpace,
-      },
+      JSON.stringify({ ...result, growingSpace }),
     );
-
     window.location.href = path;
   }
 
@@ -349,17 +339,20 @@ export default function AnalysisResult({
         </div>
       ) : null}
 
+      {saveError ? (
+        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{saveError}</div>
+      ) : null}
+
       <div className="sticky bottom-4 z-20 mt-6 flex flex-wrap gap-3 rounded-3xl border border-[var(--border-color)] bg-[var(--surface-primary)]/95 p-4 shadow-[var(--shadow-lg)] backdrop-blur-xl">
         <button
           type="button"
-          onClick={saveAnalysis}
-          className="voice-button"
+          onClick={() => void saveAnalysis()}
+          disabled={saved || saving}
+          className="voice-button disabled:opacity-60"
         >
           <Save size={17} />
 
-          {saved
-            ? "Saved"
-            : "Save to Memory"}
+          {saved ? "Saved" : saving ? "Saving…" : "Save to Memory"}
         </button>
 
         <button

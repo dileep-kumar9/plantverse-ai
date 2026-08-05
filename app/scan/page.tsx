@@ -1,19 +1,11 @@
 import ScanPageClient from "./ScanPageClient";
 
 type ScanPageProps = {
-  searchParams: Promise<{
-    view?: string | string[];
-  }>;
+  searchParams: Promise<{ report?: string | string[] }>;
 };
 
-export default async function ScanPage({
-  searchParams,
-}: ScanPageProps) {
-  const { view } = await searchParams;
-
-  const viewSaved = Array.isArray(view)
-    ? view.includes("saved")
-    : view === "saved";
-
-  return <ScanPageClient viewSaved={viewSaved} />;
+export default async function ScanPage({ searchParams }: ScanPageProps) {
+  const { report } = await searchParams;
+  const reportId = Array.isArray(report) ? report[0] : report;
+  return <ScanPageClient reportId={reportId} />;
 }
