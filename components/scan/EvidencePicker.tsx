@@ -27,41 +27,6 @@ type EvidencePickerProps = {
   onVoiceComplete: (text: string) => void;
 };
 
-type SpeechRecognitionAlternativeLike = {
-  transcript: string;
-};
-
-type SpeechRecognitionResultLike = {
-  isFinal: boolean;
-  length: number;
-  [index: number]: SpeechRecognitionAlternativeLike;
-};
-
-type SpeechRecognitionEventLike = {
-  results: ArrayLike<SpeechRecognitionResultLike>;
-};
-
-type SpeechRecognitionInstance = {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  onstart: (() => void) | null;
-  onerror: (() => void) | null;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop?: () => void;
-  abort?: () => void;
-};
-
-type SpeechRecognitionConstructor =
-  new () => SpeechRecognitionInstance;
-
-type SpeechEnabledWindow = Window & {
-  SpeechRecognition?: SpeechRecognitionConstructor;
-  webkitSpeechRecognition?: SpeechRecognitionConstructor;
-};
-
 const sources = [
   {
     id: "camera",
@@ -112,7 +77,7 @@ export default function EvidencePicker({
   const deviceRef = useRef<HTMLInputElement | null>(null);
   const finalTranscriptRef = useRef("");
   const recognitionRef =
-    useRef<SpeechRecognitionInstance | null>(null);
+    useRef<SpeechRecognitionInstanceLike | null>(null);
 
   function clearRemoteLink() {
     setRemoteUrl("");
@@ -146,11 +111,9 @@ export default function EvidencePicker({
       return;
     }
 
-    const speechWindow = window as SpeechEnabledWindow;
-
     const SpeechRecognition =
-      speechWindow.SpeechRecognition ||
-      speechWindow.webkitSpeechRecognition;
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       window.alert(
@@ -180,10 +143,11 @@ export default function EvidencePicker({
       recognitionRef.current = null;
     };
 
-    recognition.onresult = (
-      event: SpeechRecognitionEventLike,
-    ) => {
-      const results = Array.from(event.results);
+    recognition.onresult = (event) => {
+      const results: SpeechRecognitionResultLike[] = [];
+      for (let index = 0; index < event.results.length; index += 1) {
+        results.push(event.results[index]);
+      }
 
       const transcript = results
         .map((result) => result[0]?.transcript ?? "")

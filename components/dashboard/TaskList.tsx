@@ -1,62 +1,60 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useDashboardData } from "@/components/dashboard/DashboardDataProvider";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 
-const tasks = [
-  {
-    id: 1,
-    title: "Water Tomato Plants",
-    due: "Today",
-    completed: false,
-  },
-  {
-    id: 2,
-    title: "Scan Rose Plant",
-    due: "Tomorrow",
-    completed: false,
-  },
-  {
-    id: 3,
-    title: "Add Organic Compost",
-    due: "Friday",
-    completed: true,
-  },
-];
+function formatDue(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "No due date";
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
 
 export default function TaskList() {
+  const { data, loading, error, toggleReminder } = useDashboardData();
+  const [updating, setUpdating] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function toggle(id: string) {
+    const reminder = data.reminders.find((item) => item.id === id);
+    if (!reminder || updating) return;
+    setUpdating(id);
+    setActionError(null);
+    try {
+      await toggleReminder(reminder);
+    } catch (requestError) {
+      setActionError(requestError instanceof Error ? requestError.message : "Unable to update reminder.");
+    } finally {
+      setUpdating(null);
+    }
+  }
+
   return (
-    <Card className="h-full">
-      <Badge>Today&apos;s Tasks</Badge>
-
+    <Card className="h-full" aria-busy={loading}>
+      <div className="flex items-center justify-between gap-3">
+        <Badge>Upcoming tasks</Badge>
+        <Link href="/reminders" className="text-sm font-semibold text-[var(--brand-primary)] hover:underline">View all</Link>
+      </div>
+      {error || actionError ? <p className="mt-4 text-sm text-red-600">{actionError || "Unable to load reminders."}</p> : null}
+      {!loading && !error && data.reminders.length === 0 ? (
+        <div className="mt-6 rounded-2xl border border-dashed border-[var(--border-color)] p-5 text-center">
+          <p className="font-medium">No upcoming tasks</p>
+          <Link href="/reminders" className="mt-2 inline-flex text-sm font-semibold text-[var(--brand-primary)] hover:underline">Create a reminder</Link>
+        </div>
+      ) : null}
       <div className="mt-6 space-y-4">
-        {tasks.map((task) => (
-          <div
-            key={task.id}
-            className="flex items-center justify-between rounded-2xl border border-[var(--border-color)] p-4"
-          >
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={task.completed}
-                readOnly
-                className="h-5 w-5"
-              />
-
-              <div>
-                <p className="font-medium">
-                  {task.title}
-                </p>
-
-                <p className="text-sm text-[var(--text-secondary)]">
-                  {task.due}
-                </p>
-              </div>
-            </div>
-
-            {task.completed && (
-              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                Done
+        {data.reminders.slice(0, 3).map((task) => (
+          <div key={task.id} className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border-color)] p-4">
+            <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+              <input type="checkbox" checked={task.done} disabled={updating === task.id} onChange={() => void toggle(task.id)} className="h-5 w-5 accent-[var(--brand-primary)]" />
+              <span className="min-w-0">
+                <span className="block truncate font-medium">{task.title}</span>
+                <span className="block text-sm text-[var(--text-secondary)]">{formatDue(task.dueAt)}</span>
               </span>
-            )}
+            </label>
+            {updating === task.id ? <span className="text-xs text-[var(--text-tertiary)]">Saving…</span> : null}
           </div>
         ))}
       </div>

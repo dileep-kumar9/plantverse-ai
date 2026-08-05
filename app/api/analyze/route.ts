@@ -1,8 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
+import { consumeDailyQuota, enforceRateLimit } from "@/lib/rate-limit";
+import { assertSameOrigin, cleanText } from "@/lib/security";
+import { requireUser } from "@/lib/server/require-user";
 
+export const runtime = "nodejs";
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
-
+const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
+const ALLOWED_SCAN_TYPES = new Set(["plant", "soil", "land", "fruit", "flower", "tree", "pest"]);
 const LIST_FIELDS = [
   "symptoms",
   "possibleCauses",
@@ -19,232 +24,128 @@ function normalizeStringList(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value
       .flatMap((item) => {
-        if (typeof item === "string") {
-          return item;
-        }
-
-        if (item && typeof item === "object") {
-          return Object.values(item).map(String);
-        }
-
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") return Object.values(item).map(String);
         return String(item ?? "");
       })
       .map((item) => item.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .slice(0, 20);
   }
-
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed ? [trimmed] : [];
-  }
-
+  if (typeof value === "string") return value.trim() ? [value.trim()] : [];
   if (value && typeof value === "object") {
     return Object.values(value)
       .flatMap((item) => (Array.isArray(item) ? item : [item]))
       .map((item) => String(item).trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .slice(0, 20);
   }
-
   return [];
 }
 
-function normalizeResult(rawResult: Record<string, unknown>) {
+function normalizeResult(raw: Record<string, unknown>) {
   const result: Record<string, unknown> = {
-    ...rawResult,
-    plantName:
-      typeof rawResult.plantName === "string"
-        ? rawResult.plantName.trim()
-        : "",
-    localName:
-      typeof rawResult.localName === "string"
-        ? rawResult.localName.trim()
-        : "",
-    scientificName:
-      typeof rawResult.scientificName === "string"
-        ? rawResult.scientificName.trim()
-        : "",
-    healthScore: Math.max(
-      0,
-      Math.min(100, Number(rawResult.healthScore) || 0),
-    ),
-    confidence: Math.max(
-      0,
-      Math.min(100, Number(rawResult.confidence) || 0),
-    ),
-    roadOrNonGrowingSurface:
-      rawResult.roadOrNonGrowingSurface === true,
+    ...raw,
+    plantName: cleanText(raw.plantName, 120),
+    localName: cleanText(raw.localName, 120),
+    scientificName: cleanText(raw.scientificName, 160),
+    disease: cleanText(raw.disease, 200),
+    severity: cleanText(raw.severity, 80),
+    disclaimer: cleanText(raw.disclaimer, 800),
+    scene: cleanText(raw.scene, 300),
+    soilType: cleanText(raw.soilType, 160),
+    growingSpace: cleanText(raw.growingSpace, 80),
+    wateringAdvice: cleanText(raw.wateringAdvice, 1000),
+    moistureNote: cleanText(raw.moistureNote, 500),
+    healthScore: Math.max(0, Math.min(100, Number(raw.healthScore) || 0)),
+    confidence: Math.max(0, Math.min(100, Number(raw.confidence) || 0)),
+    roadOrNonGrowingSurface: raw.roadOrNonGrowingSurface === true,
   };
-
-  for (const field of LIST_FIELDS) {
-    result[field] = normalizeStringList(rawResult[field]);
-  }
-
+  for (const field of LIST_FIELDS) result[field] = normalizeStringList(raw[field]);
   return result;
 }
 
-export async function GET() {
-  return NextResponse.json({
-    route: "PlantVerse analysis API",
-    configured: Boolean(process.env.GEMINI_API_KEY),
-  });
+export async function GET(request: NextRequest) {
+  try {
+    await requireUser(request);
+    return NextResponse.json({ route: "PlantVerse analysis API", configured: Boolean(process.env.GEMINI_API_KEY) });
+  } catch {
+    return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    assertSameOrigin(request);
+    const user = await requireUser(request);
+    await enforceRateLimit(request, "analyze-image", 20, 60 * 60, user.sub);
+    await consumeDailyQuota(user.sub, "image_analysis");
     const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "GEMINI_API_KEY is missing." },
-        { status: 500 },
-      );
-    }
+    if (!apiKey) return NextResponse.json({ error: "AI service is not configured." }, { status: 503 });
 
     const formData = await request.formData();
-
     const image = formData.get("image");
-    const scanType = String(formData.get("scanType") || "plant");
-    const growingSpace = String(
-      formData.get("growingSpace") || "unknown",
-    );
-    const notes = String(formData.get("notes") || "");
+    const requestedScanType = cleanText(formData.get("scanType") || "plant", 30);
+    const scanType = ALLOWED_SCAN_TYPES.has(requestedScanType) ? requestedScanType : "plant";
+    const growingSpace = cleanText(formData.get("growingSpace") || "unknown", 50);
+    const notes = cleanText(formData.get("notes"), 1000);
 
-    if (!(image instanceof File) || !image.type.startsWith("image/")) {
-      return NextResponse.json(
-        { error: "A valid image is required." },
-        { status: 400 },
-      );
+    if (!(image instanceof File) || !ALLOWED_TYPES.has(image.type.toLowerCase())) {
+      return NextResponse.json({ error: "Upload a JPEG, PNG, WebP, HEIC, or HEIF image." }, { status: 400 });
     }
+    if (image.size < 1_000) return NextResponse.json({ error: "The image file appears to be empty." }, { status: 400 });
+    if (image.size > MAX_IMAGE_SIZE) return NextResponse.json({ error: "Image must be under 8 MB." }, { status: 413 });
 
-    if (image.size > MAX_IMAGE_SIZE) {
-      return NextResponse.json(
-        { error: "Image must be under 8 MB." },
-        { status: 413 },
-      );
-    }
-
-    const imageBase64 = Buffer.from(
-      await image.arrayBuffer(),
-    ).toString("base64");
-
+    const imageBase64 = Buffer.from(await image.arrayBuffer()).toString("base64");
     const ai = new GoogleGenAI({ apiKey });
-
     const prompt = `
 You are PlantVerse AI, a cautious plant and agriculture visual assistant.
-
-Analyze this image for the selected scan category: ${scanType}.
-User-selected growing space: ${growingSpace}.
+Analyze the supplied image for the selected category: ${scanType}.
+Growing context: ${growingSpace}.
 User notes: ${notes || "None provided"}.
 
-Language requirements:
-- plantName must contain the common English name.
-- localName must contain the commonly used Telugu name written only in Telugu script.
-- Example: Tomato → టమాటా, Rose → గులాబీ, Mango → మామిడి.
-- If the subject cannot be identified confidently, return an empty localName.
-- scientificName should contain the scientific botanical name when known.
+Requirements:
+- First classify the scene and explicitly identify roads, buildings, walls, floors, or other non-growing surfaces.
+- plantName is the common English name; localName is the commonly used Telugu name written only in Telugu script; scientificName is botanical when known.
+- If identification is uncertain, say so and leave localName/scientificName empty rather than guessing.
+- For plant-health scans, identify visible symptoms, plausible causes, cautious treatment, prevention, and evidence needed.
+- For soil scans, estimate only visible type, texture, and drainage clues. State that exact moisture, pH, nutrients, and contamination cannot be measured from a photograph.
+- For land scans, recommend layout only after considering sunlight, water, dimensions, and local conditions.
+- Fertilizer and pesticide suggestions must be optional, label-compliant, low-risk, and prioritize integrated pest management.
+- healthScore and confidence are numbers from 0 to 100. Every list field is an array of strings.
+- Include a concise disclaimer that this is AI guidance, not a laboratory test or licensed agronomist diagnosis.
+- Return only valid JSON, no markdown.
 
-Analysis requirements:
-- First classify the scene.
-- Explicitly identify roads, buildings, walls, floors, or other non-growing surfaces.
-- For plant-health scans, identify the likely plant, health condition, symptoms, causes and cautious treatment.
-- For soil scans, estimate only visible soil type, texture and drainage clues.
-- State that exact soil moisture cannot be measured from a photograph.
-- For land scans, recommend suitable plants and layout based on pot, terrace, field or empty land.
-- For fruit, flower, tree and pest scans, specialize the report for that category.
-- Fertilizer and pesticide advice must be optional, cautious and label-compliant.
-- Prefer integrated pest management and low-risk recommendations.
-- healthScore and confidence must be numbers between 0 and 100.
-- Every list field must always be returned as a JSON array of strings.
-- Do not return markdown or code fences.
-
-Return ONLY valid JSON with these keys:
-
-{
-  "plantName": "",
-  "localName": "",
-  "scientificName": "",
-  "healthScore": 0,
-  "disease": "",
-  "confidence": 0,
-  "severity": "",
-  "symptoms": [],
-  "possibleCauses": [],
-  "treatment": [],
-  "prevention": [],
-  "evidenceNeeded": [],
-  "disclaimer": "",
-  "scene": "",
-  "soilType": "",
-  "soilImprovement": [],
-  "suitablePlants": [],
-  "growingSpace": "",
-  "roadOrNonGrowingSurface": false,
-  "fertilizerSuggestions": [],
-  "pesticideSuggestions": [],
-  "wateringAdvice": "",
-  "moistureNote": ""
-}
-`;
+Schema:
+{"plantName":"","localName":"","scientificName":"","healthScore":0,"disease":"","confidence":0,"severity":"","symptoms":[],"possibleCauses":[],"treatment":[],"prevention":[],"evidenceNeeded":[],"disclaimer":"","scene":"","soilType":"","soilImprovement":[],"suitablePlants":[],"growingSpace":"","roadOrNonGrowingSurface":false,"fertilizerSuggestions":[],"pesticideSuggestions":[],"wateringAdvice":"","moistureNote":""}`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
       contents: [
         {
           role: "user",
           parts: [
-            {
-              inlineData: {
-                mimeType: image.type,
-                data: imageBase64,
-              },
-            },
-            {
-              text: prompt,
-            },
+            { inlineData: { mimeType: image.type, data: imageBase64 } },
+            { text: prompt },
           ],
         },
       ],
-      config: {
-        responseMimeType: "application/json",
-        temperature: 0.2,
-      },
+      config: { responseMimeType: "application/json", temperature: 0.15 },
     });
-
-    if (!response.text) {
-      return NextResponse.json(
-        { error: "Gemini returned an empty response." },
-        { status: 502 },
-      );
-    }
-
-    let parsedResult: Record<string, unknown>;
-
+    if (!response.text) throw new Error("AI returned an empty response.");
+    let parsed: Record<string, unknown>;
     try {
-      parsedResult = JSON.parse(response.text);
+      parsed = JSON.parse(response.text) as Record<string, unknown>;
     } catch {
-      return NextResponse.json(
-        {
-          error: "Gemini returned an invalid JSON response.",
-          rawResponse: response.text,
-        },
-        { status: 502 },
-      );
+      throw new Error("AI returned an invalid response.");
     }
-
-    return NextResponse.json({
-      result: normalizeResult(parsedResult),
-    });
+    return NextResponse.json({ result: normalizeResult(parsed) });
   } catch (error) {
-    console.error("PlantVerse analysis failed:", error);
-
+    console.error("PlantVerse analysis failed", error);
+    const status = Number((error as { status?: number }).status ?? 500);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Analysis failed.",
-      },
-      { status: 500 },
+      { error: status >= 500 ? "Analysis is temporarily unavailable." : error instanceof Error ? error.message : "Analysis failed." },
+      { status },
     );
   }
 }

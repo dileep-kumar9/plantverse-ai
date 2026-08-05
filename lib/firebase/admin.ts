@@ -1,4 +1,5 @@
 import {
+  applicationDefault,
   cert,
   getApp,
   getApps,
@@ -6,45 +7,60 @@ import {
   type App,
 } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
-import {
-  getFirestore,
-  type Firestore,
-} from "firebase-admin/firestore";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getMessaging, type Messaging } from "firebase-admin/messaging";
+import { getStorage, type Storage } from "firebase-admin/storage";
 
-function getAdminCredentials() {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(
-    /\\n/g,
-    "\n",
-  );
+let cachedApp: App | null = null;
 
-  if (!projectId || !clientEmail || !privateKey) {
-    throw new Error(
-      "Missing Firebase Admin credentials. Check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY.",
-    );
-  }
-
-  return {
-    projectId,
-    clientEmail,
-    privateKey,
-  };
+function normalizedPrivateKey(): string | undefined {
+  return process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 }
 
 function createAdminApp(): App {
-  if (getApps().length > 0) {
-    return getApp();
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = normalizedPrivateKey();
+
+  if (projectId && clientEmail && privateKey) {
+    return initializeApp({
+      projectId,
+      credential: cert({ projectId, clientEmail, privateKey }),
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    });
   }
 
-  const credentials = getAdminCredentials();
+  if (projectId && process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    return initializeApp({
+      projectId,
+      credential: applicationDefault(),
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    });
+  }
 
-  return initializeApp({
-    credential: cert(credentials),
-    projectId: credentials.projectId,
-  });
+  throw new Error(
+    "Firebase Admin credentials are not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY.",
+  );
 }
 
-export const firebaseAdminApp: App = createAdminApp();
-export const adminAuth: Auth = getAuth(firebaseAdminApp);
-export const adminDb: Firestore = getFirestore(firebaseAdminApp);
+export function getFirebaseAdminApp(): App {
+  if (cachedApp) return cachedApp;
+  cachedApp = getApps().length > 0 ? getApp() : createAdminApp();
+  return cachedApp;
+}
+
+export function getAdminAuth(): Auth {
+  return getAuth(getFirebaseAdminApp());
+}
+
+export function getAdminDb(): Firestore {
+  return getFirestore(getFirebaseAdminApp());
+}
+
+export function getAdminMessaging(): Messaging {
+  return getMessaging(getFirebaseAdminApp());
+}
+
+export function getAdminStorage(): Storage {
+  return getStorage(getFirebaseAdminApp());
+}
