@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, CameraIcon, Mic, MicOff, RefreshCcw, Square, Video } from "lucide-react";
+import { CameraIcon, Mic, MicOff, RefreshCcw, Square, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 type CameraCaptureProps = {

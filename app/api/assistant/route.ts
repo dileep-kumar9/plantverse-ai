@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
-import { consumeDailyQuota, enforceRateLimit } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { assertSameOrigin, cleanText, validateJsonSize } from "@/lib/security";
 import { requireUser } from "@/lib/server/require-user";
 
