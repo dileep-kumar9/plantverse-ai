@@ -1,11 +1,12 @@
 "use client";
 
 import {
+  Check,
   ChevronDown,
   RotateCcw,
   Sparkles,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import AnalysisResult from "@/components/scan/AnalysisResult";
@@ -30,11 +31,13 @@ import {
 } from "@/types/scan-wizard";
 
 const spaces = [
-  { id: "pot", label: "Pot" },
-  { id: "terrace", label: "Terrace" },
-  { id: "field", label: "Field" },
-  { id: "empty-land", label: "Empty land" },
-];
+  { id: "pot", label: "Pot", icon: "🪴" },
+  { id: "terrace", label: "Terrace", icon: "🏡" },
+  { id: "field", label: "Field", icon: "🌾" },
+  { id: "empty-land", label: "Empty land", icon: "🌳" },
+] as const;
+
+type GrowingSpace = (typeof spaces)[number]["id"];
 
 export default function ScanPageClient({
   reportId,
@@ -48,7 +51,9 @@ export default function ScanPageClient({
 
   const [scanType, setScanType] =
     useState<ScanCategory | null>(null);
-  const [space, setSpace] = useState("field");
+  const [space, setSpace] = useState<GrowingSpace>("field");
+  const [spaceMenuOpen, setSpaceMenuOpen] = useState(false);
+  const spaceMenuRef = useRef<HTMLDivElement | null>(null);
   const [notes, setNotes] = useState("");
   const [file, setFile] =
     useState<File | null>(null);
@@ -76,6 +81,13 @@ export default function ScanPageClient({
         (item) => item.id === scanType,
       ) ?? null,
     [scanType],
+  );
+
+  const selectedSpace = useMemo(
+    () =>
+      spaces.find((item) => item.id === space) ??
+      spaces[2],
+    [space],
   );
 
   useEffect(() => {
@@ -108,6 +120,31 @@ export default function ScanPageClient({
     },
     [previewUrl],
   );
+
+  useEffect(() => {
+    function closeMenu(event: MouseEvent) {
+      if (
+        spaceMenuRef.current &&
+        !spaceMenuRef.current.contains(event.target as Node)
+      ) {
+        setSpaceMenuOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setSpaceMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", closeMenu);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", closeMenu);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
 
   function clearEvidence() {
     if (previewUrl) {
@@ -486,33 +523,94 @@ export default function ScanPageClient({
               Change analysis
             </button>
 
-            <label className="relative mt-6 block">
+            <div
+              ref={spaceMenuRef}
+              className="relative mt-6"
+            >
               <span className="mb-2 block text-sm font-semibold">
                 Growing context
               </span>
 
-              <select
-                value={space}
-                onChange={(event) =>
-                  setSpace(event.target.value)
+              <button
+                type="button"
+                onClick={() =>
+                  setSpaceMenuOpen((current) => !current)
                 }
-                className="min-h-12 w-full appearance-none rounded-2xl border border-[var(--border-color)] bg-[var(--surface-secondary)] px-4 pr-10 outline-none"
+                className="flex min-h-12 w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--surface-secondary)] px-4 text-left outline-none transition hover:border-[var(--brand-primary)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-green-600/10"
+                aria-haspopup="listbox"
+                aria-expanded={spaceMenuOpen}
               >
-                {spaces.map((item) => (
-                  <option
-                    key={item.id}
-                    value={item.id}
+                <span className="flex items-center gap-3">
+                  <span
+                    className="text-xl"
+                    aria-hidden="true"
                   >
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+                    {selectedSpace.icon}
+                  </span>
 
-              <ChevronDown
-                size={17}
-                className="pointer-events-none absolute bottom-4 right-4 text-[var(--text-secondary)]"
-              />
-            </label>
+                  <span className="font-medium">
+                    {selectedSpace.label}
+                  </span>
+                </span>
+
+                <ChevronDown
+                  size={18}
+                  className={`shrink-0 text-[var(--text-secondary)] transition ${
+                    spaceMenuOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {spaceMenuOpen ? (
+                <div
+                  role="listbox"
+                  aria-label="Select growing context"
+                  className="absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--surface-primary)] p-2 shadow-[var(--shadow-lg)]"
+                >
+                  {spaces.map((item) => {
+                    const selected = item.id === space;
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="option"
+                        aria-selected={selected}
+                        onClick={() => {
+                          setSpace(item.id);
+                          setSpaceMenuOpen(false);
+                        }}
+                        className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition ${
+                          selected
+                            ? "bg-[var(--brand-primary)] text-white"
+                            : "hover:bg-[var(--surface-secondary)]"
+                        }`}
+                      >
+                        <span className="flex items-center gap-3">
+                          <span
+                            className="text-xl"
+                            aria-hidden="true"
+                          >
+                            {item.icon}
+                          </span>
+
+                          <span className="font-medium">
+                            {item.label}
+                          </span>
+                        </span>
+
+                        {selected ? (
+                          <Check
+                            size={18}
+                            aria-hidden="true"
+                          />
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
 
             <label className="mt-5 block">
               <span className="text-sm font-semibold">

@@ -1,4 +1,4 @@
-export const TERMS_VERSION = "2026-08-04";
+﻿export const TERMS_VERSION = "2026-08-04";
 export const PRIVACY_VERSION = "2026-08-04";
 export const COOKIE_VERSION = "2026-08-04";
 export const REFUND_POLICY_VERSION = "2026-08-04";
@@ -32,8 +32,8 @@ export function getLegalOperator(): LegalOperator {
     state: value("LEGAL_STATE", "State pending"),
     postalCode: value("LEGAL_POSTAL_CODE", "Postal code pending"),
     country: value("LEGAL_COUNTRY", "India"),
-    supportEmail: value("LEGAL_SUPPORT_EMAIL", "support@example.invalid"),
-    privacyEmail: value("LEGAL_PRIVACY_EMAIL", "privacy@example.invalid"),
+    supportEmail: value("LEGAL_SUPPORT_EMAIL", "k43234609@gmail.com"),
+    privacyEmail: value("LEGAL_PRIVACY_EMAIL", "k43234609@gmail.com"),
     supportPhone: value("LEGAL_SUPPORT_PHONE", "Phone pending"),
     gstin: value("LEGAL_GSTIN", "GSTIN pending if applicable"),
     jurisdiction: value("LEGAL_JURISDICTION", "India"),
@@ -55,3 +55,4 @@ export function missingLegalEnvironmentVariables(): string[] {
   ];
   return required.filter((name) => !process.env[name]?.trim());
 }
+

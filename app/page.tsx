@@ -13,18 +13,25 @@ export default function Home() {
   return (
     <DashboardDataProvider>
       <main className="min-h-screen bg-[var(--app-background)]">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
           <SearchBar />
-          <DashboardHero />
-          <section className="mt-8 grid items-stretch gap-6 lg:grid-cols-2">
+
+          <div className="mt-4 sm:mt-6">
+            <DashboardHero />
+          </div>
+
+          <section className="mt-5 grid items-stretch gap-4 sm:mt-7 lg:grid-cols-2 lg:gap-6">
             <WeatherWidget />
             <GardenHealth />
           </section>
+
           <QuickActions />
-          <section className="mt-10 grid items-stretch gap-6 lg:grid-cols-2">
+
+          <section className="mt-7 grid items-stretch gap-4 sm:mt-9 lg:grid-cols-2 lg:gap-6">
             <TaskList />
             <RecentActivity />
           </section>
+
           <RecentPlants />
           <AITips />
         </div>
