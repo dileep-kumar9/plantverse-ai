@@ -26,7 +26,9 @@ function serializeValue(value: unknown): unknown {
 }
 
 function serializeSnapshot<T extends Record<string, unknown>>(
-  snapshot: QueryDocumentSnapshot<DocumentData> | { id: string; data(): DocumentData | undefined },
+  snapshot:
+    | QueryDocumentSnapshot<DocumentData>
+    | { id: string; data(): DocumentData | undefined },
 ): T & { id: string } {
   return {
     ...(serializeValue(snapshot.data() ?? {}) as T),
@@ -40,6 +42,45 @@ function database(): Firestore {
 
 function document(path: string): DocumentReference<DocumentData> {
   return database().doc(path);
+}
+
+function errorCode(error: unknown): string {
+  const value = error as {
+    code?: string | number;
+    status?: string | number;
+    message?: string;
+  };
+
+  return String(value.code ?? value.status ?? "").toUpperCase();
+}
+
+function errorMessage(error: unknown): string {
+  return String((error as { message?: string }).message ?? "").toUpperCase();
+}
+
+function isNotFoundError(error: unknown): boolean {
+  const code = errorCode(error);
+  const message = errorMessage(error);
+
+  return (
+    code === "5" ||
+    code.includes("NOT_FOUND") ||
+    code.includes("NOT-FOUND") ||
+    message.includes("NO DOCUMENT TO UPDATE") ||
+    message.includes("NOT FOUND")
+  );
+}
+
+function isAlreadyExistsError(error: unknown): boolean {
+  const code = errorCode(error);
+  const message = errorMessage(error);
+
+  return (
+    code === "6" ||
+    code.includes("ALREADY_EXISTS") ||
+    code.includes("ALREADY-EXISTS") ||
+    message.includes("ALREADY EXISTS")
+  );
 }
 
 export async function getDocument<T extends Record<string, unknown>>(
@@ -65,7 +106,19 @@ export async function createDocument<T extends Record<string, unknown>>(
   data: T,
 ): Promise<T & { id: string }> {
   const ref = document(path);
-  await ref.create(data);
+
+  try {
+    await ref.create(data);
+  } catch (error) {
+    if (isAlreadyExistsError(error)) {
+      throw Object.assign(new Error("A record with this identifier already exists."), {
+        status: 409,
+      });
+    }
+
+    throw error;
+  }
+
   const snapshot = await ref.get();
   return serializeSnapshot<T>(snapshot);
 }
@@ -80,8 +133,43 @@ export async function mergeDocument<T extends Record<string, unknown>>(
   return serializeSnapshot<T>(snapshot);
 }
 
+export async function updateDocument<T extends Record<string, unknown>>(
+  path: string,
+  patch: T,
+): Promise<T & { id: string }> {
+  const ref = document(path);
+
+  try {
+    await ref.update(patch);
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      throw Object.assign(new Error("Record not found."), {
+        status: 404,
+      });
+    }
+
+    throw error;
+  }
+
+  const snapshot = await ref.get();
+  return serializeSnapshot<T>(snapshot);
+}
+
 export async function deleteDocument(path: string): Promise<void> {
   await document(path).delete();
+}
+
+export async function deleteExistingDocument(path: string): Promise<void> {
+  const ref = document(path);
+  const snapshot = await ref.get();
+
+  if (!snapshot.exists) {
+    throw Object.assign(new Error("Record not found."), {
+      status: 404,
+    });
+  }
+
+  await ref.delete();
 }
 
 export async function listDocuments<T extends Record<string, unknown>>(
@@ -89,7 +177,10 @@ export async function listDocuments<T extends Record<string, unknown>>(
   limit = 100,
 ): Promise<Array<T & { id: string }>> {
   const safeLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
-  const snapshot = await database().collection(collectionPath).limit(safeLimit).get();
+  const snapshot = await database()
+    .collection(collectionPath)
+    .limit(safeLimit)
+    .get();
   return snapshot.docs.map((item) => serializeSnapshot<T>(item));
 }
 
