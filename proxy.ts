@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/session";
 
 const PUBLIC_ROUTES = [
+  "/",
+  "/offline",
+  "/robots.txt",
+  "/sitemap.xml",
   "/login",
   "/signup",
   "/forgot-password",
@@ -40,8 +44,12 @@ export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE_NAME)?.value);
 
+  if (pathname === "/" && hasSession) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
   if (isAuthenticationPage(pathname) && hasSession) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   if (!isPublic(pathname) && !hasSession) {

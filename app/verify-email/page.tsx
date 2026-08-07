@@ -27,7 +27,7 @@ export default function VerifyEmailPage() {
         return;
       }
       await establishSession(firebaseUser, false);
-      router.replace("/");
+      router.replace("/dashboard");
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to verify the account.");

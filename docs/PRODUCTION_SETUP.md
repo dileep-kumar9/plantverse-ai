@@ -10,7 +10,7 @@ Create a Web Push certificate and set `NEXT_PUBLIC_FIREBASE_VAPID_KEY` before en
 
 ## 2. Vercel
 
-Add the variables from `.env.example` separately for Preview and Production. Use the production URL for `NEXT_PUBLIC_APP_URL`. Configure `CRON_SECRET`; `vercel.json` invokes the reminder/reservation-release cron every 15 minutes and the optional Firestore export cron daily. Leave `ENABLE_SCHEDULED_BACKUPS=false` until the backup bucket, IAM and retention policy are verified. Keep indexing and commerce disabled during acceptance.
+Add the variables from `.env.example` separately for Preview and Production. Use the production URL for `NEXT_PUBLIC_APP_URL`. Configure `CRON_SECRET`; `vercel.json` invokes the reminder/reservation-release cron every 15 minutes and the optional Firestore export cron daily. Leave `ENABLE_SCHEDULED_BACKUPS=false` until the backup bucket, IAM and retention policy are verified. Keep indexing and commerce disabled during acceptance. After the production URL is verified and ready for public discovery, set `ALLOW_INDEXING=true`, configure `GOOGLE_SITE_VERIFICATION`, redeploy, and follow `GOOGLE_SEARCH_PWA.md`.
 
 ## 3. Upstash
 

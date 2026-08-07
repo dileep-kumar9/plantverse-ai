@@ -10,7 +10,7 @@ import GlobalVoiceAssistant from "@/components/global/GlobalVoiceAssistant";
 import SelectionTranslator from "@/components/global/SelectionTranslator";
 
 const links = [
-  ["/", "🏠", "Home"],
+  ["/dashboard", "🏠", "Home"],
   ["/scan", "📷", "Smart Scan"],
   ["/plants", "🌿", "My Plants"],
   ["/memory", "🧠", "Plant Memory"],
@@ -27,6 +27,8 @@ const links = [
 ] as const;
 
 const minimalRoutes = [
+  "/",
+  "/offline",
   "/login",
   "/signup",
   "/forgot-password",
@@ -81,7 +83,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <div className="min-h-screen bg-[var(--app-background)] text-[var(--text-primary)]">
         <header className="border-b border-[var(--border-color)] bg-[var(--header-background)]">
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-            <Link href={user ? "/" : "/login"} className="flex items-center gap-3 font-semibold">
+            <Link href="/" className="flex items-center gap-3 font-semibold">
               <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[var(--brand-primary)] text-xl text-white">🌿</span>
               PlantVerse AI
             </Link>
@@ -105,7 +107,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-[var(--app-background)] text-[var(--text-primary)]">
       <header className="sticky top-0 z-50 border-b border-[var(--border-color)] bg-[var(--header-background)]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-3 font-semibold">
+          <Link href="/dashboard" className="flex items-center gap-3 font-semibold">
             <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[var(--brand-primary)] text-xl text-white">🌿</span>
             <span>PlantVerse AI</span>
           </Link>
@@ -146,7 +148,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           ) : null}
           <nav className="grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-1" aria-label="Primary navigation">
             {links.map(([href, icon, label]) => {
-              const active = href === "/" ? pathname === href : pathname.startsWith(href);
+              const active = href === "/dashboard" ? pathname === href : pathname.startsWith(href);
               return (
                 <Link key={href} href={href} className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium ${active ? "bg-[var(--brand-soft)] text-[var(--brand-primary)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]"}`}>
                   <span aria-hidden="true">{icon}</span>{label}

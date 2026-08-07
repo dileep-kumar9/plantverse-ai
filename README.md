@@ -52,12 +52,21 @@ npm.cmd run dev
 
 ## Deployment gates
 
-Keep these disabled until `docs/RELEASE_CHECKLIST.md` is complete and strict acceptance passes:
+Keep commerce disabled until `docs/RELEASE_CHECKLIST.md` is complete and strict acceptance passes:
 
 ```env
 ENABLE_COMMERCE=false
 NEXT_PUBLIC_COMMERCE_ENABLED=false
-ALLOW_INDEXING=false
 ```
+
+During Preview/acceptance keep search indexing disabled. For the verified Production deployment, set:
+
+```env
+NEXT_PUBLIC_APP_URL=https://plantverse-ai.vercel.app
+ALLOW_INDEXING=true
+GOOGLE_SITE_VERIFICATION=<Search Console verification token>
+```
+
+See `docs/GOOGLE_SEARCH_PWA.md` for Google Search submission and free PWA installation steps.
 
 See `docs/IMPLEMENTATION_MATRIX.md`, `docs/PRODUCTION_SETUP.md`, `docs/INTEGRATIONS.md`, `docs/SECURITY.md`, `docs/TESTING.md`, `docs/BACKUP_AND_RESTORE.md`, `docs/BUILD_VERIFICATION.md`, and `docs/RELEASE_CHECKLIST.md`.

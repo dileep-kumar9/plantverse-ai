@@ -76,7 +76,7 @@ export default function LoginPage() {
     const next = new URLSearchParams(window.location.search).get("next");
 
     router.replace(
-      next?.startsWith("/") && !next.startsWith("//") ? next : "/",
+      next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard",
     );
 
     router.refresh();
