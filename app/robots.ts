@@ -1,12 +1,41 @@
 import type { MetadataRoute } from "next";
 
+import { allowSearchIndexing, SITE_URL } from "@/lib/site";
+
 export default function robots(): MetadataRoute.Robots {
-  const allow = process.env.ALLOW_INDEXING === "true";
-  const base = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  if (!allowSearchIndexing()) {
+    return {
+      rules: { userAgent: "*", disallow: "/" },
+    };
+  }
+
   return {
-    rules: allow
-      ? { userAgent: "*", allow: "/", disallow: ["/admin", "/api", "/profile", "/settings", "/memory", "/orders"] }
-      : { userAgent: "*", disallow: "/" },
-    sitemap: allow ? `${base}/sitemap.xml` : undefined,
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: [
+        "/admin",
+        "/api",
+        "/assistant",
+        "/cart",
+        "/community",
+        "/dashboard",
+        "/devices",
+        "/marketplace",
+        "/memory",
+        "/notifications",
+        "/orders",
+        "/planner",
+        "/plants",
+        "/profile",
+        "/reminders",
+        "/scan",
+        "/settings",
+        "/translator",
+        "/verify-email",
+      ],
+    },
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
   };
 }

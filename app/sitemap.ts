@@ -1,11 +1,19 @@
 import type { MetadataRoute } from "next";
 
+import { absoluteUrl } from "@/lib/site";
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
-  return ["/login", "/signup", "/privacy", "/terms", "/cookies", "/shipping", "/refunds", "/safety"].map((path) => ({
-    url: `${base}${path}`,
-    lastModified: new Date(),
-    changeFrequency: "monthly" as const,
-    priority: path === "/login" || path === "/signup" ? 0.8 : 0.5,
+  return [
+    { path: "/", changeFrequency: "weekly" as const, priority: 1 },
+    { path: "/privacy", changeFrequency: "yearly" as const, priority: 0.5 },
+    { path: "/terms", changeFrequency: "yearly" as const, priority: 0.5 },
+    { path: "/safety", changeFrequency: "yearly" as const, priority: 0.5 },
+    { path: "/cookies", changeFrequency: "yearly" as const, priority: 0.4 },
+    { path: "/shipping", changeFrequency: "yearly" as const, priority: 0.4 },
+    { path: "/refunds", changeFrequency: "yearly" as const, priority: 0.4 },
+  ].map(({ path, changeFrequency, priority }) => ({
+    url: absoluteUrl(path),
+    changeFrequency,
+    priority,
   }));
 }
