@@ -39,24 +39,26 @@ export default function TaskList() {
       </div>
       {error || actionError ? <p className="mt-4 text-sm text-red-600">{actionError || "Unable to load reminders."}</p> : null}
       {!loading && !error && data.reminders.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-[var(--border-color)] p-5 text-center">
+        <div className="mt-6 animate-fade-in rounded-2xl border border-dashed border-[var(--border-color)] p-5 text-center">
           <p className="font-medium">No upcoming tasks</p>
           <Link href="/reminders" className="mt-2 inline-flex text-sm font-semibold text-[var(--brand-primary)] hover:underline">Create a reminder</Link>
         </div>
       ) : null}
       <div className="mt-6 space-y-4">
-        {data.reminders.slice(0, 3).map((task) => (
-          <div key={task.id} className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border-color)] p-4">
-            <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
-              <input type="checkbox" checked={task.done} disabled={updating === task.id} onChange={() => void toggle(task.id)} className="h-5 w-5 accent-[var(--brand-primary)]" />
-              <span className="min-w-0">
-                <span className="block truncate font-medium">{task.title}</span>
-                <span className="block text-sm text-[var(--text-secondary)]">{formatDue(task.dueAt)}</span>
-              </span>
-            </label>
-            {updating === task.id ? <span className="text-xs text-[var(--text-tertiary)]">Saving…</span> : null}
-          </div>
-        ))}
+        {loading
+          ? [0, 1, 2].map((i) => <div key={i} className="skeleton h-[4.25rem] rounded-2xl" />)
+          : data.reminders.slice(0, 3).map((task) => (
+            <div key={task.id} className="tap-scale flex items-center justify-between gap-4 rounded-2xl border border-[var(--border-color)] p-4 transition-colors duration-150 hover:bg-[var(--surface-secondary)]">
+              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                <input type="checkbox" checked={task.done} disabled={updating === task.id} onChange={() => void toggle(task.id)} className="h-5 w-5 accent-[var(--brand-primary)]" />
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{task.title}</span>
+                  <span className="block text-sm text-[var(--text-secondary)]">{formatDue(task.dueAt)}</span>
+                </span>
+              </label>
+              {updating === task.id ? <span className="text-xs text-[var(--text-tertiary)]">Saving…</span> : null}
+            </div>
+          ))}
       </div>
     </Card>
   );

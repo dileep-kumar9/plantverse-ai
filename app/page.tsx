@@ -88,7 +88,7 @@ export default function PublicHomePage() {
 
       <section className="relative overflow-hidden border-b border-[var(--border-color)]">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.15fr_.85fr] lg:items-center">
-          <div>
+          <div className="animate-fade-in-up">
             <p className="eyebrow">Plant care, planning and records</p>
             <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-0.04em] sm:text-5xl lg:text-6xl">
               Grow with better context using PlantVerse AI.
@@ -97,26 +97,26 @@ export default function PublicHomePage() {
               PlantVerse AI combines photo-assisted plant analysis, soil guidance, grow planning, reminders and private plant records in one gardening workspace.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/signup" className="voice-button">Create free account</Link>
-              <Link href="/login" className="outline-button">Sign in</Link>
+              <Link href="/signup" className="voice-button tap-scale">Create free account</Link>
+              <Link href="/login" className="outline-button tap-scale">Sign in</Link>
             </div>
             <div className="mt-4">
               <PwaInstallButton />
             </div>
           </div>
 
-          <div className="hero-panel overflow-hidden rounded-[2rem] p-6 text-white sm:p-8">
+          <div className="hero-panel animate-fade-in-up overflow-hidden rounded-[2rem] p-6 text-white sm:p-8" style={{ animationDelay: "120ms" }}>
             <div className="relative z-10">
               <div className="grid h-16 w-16 place-items-center rounded-2xl bg-white/15 text-3xl">🌿</div>
               <h2 className="mt-7 text-2xl font-semibold">One workspace for your garden</h2>
               <p className="mt-3 leading-7 text-white/80">
                 Scan a plant, plan a growing space, save what matters and return to your garden history from any supported browser.
               </p>
-              <div className="mt-7 grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-4">📷 Smart Scan</div>
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-4">🌾 Grow Planner</div>
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-4">🌱 My Plants</div>
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-4">⏰ Reminders</div>
+              <div className="stagger-children mt-7 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 transition-transform duration-200 hover:-translate-y-0.5">📷 Smart Scan</div>
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 transition-transform duration-200 hover:-translate-y-0.5">🌾 Grow Planner</div>
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 transition-transform duration-200 hover:-translate-y-0.5">🌱 My Plants</div>
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 transition-transform duration-200 hover:-translate-y-0.5">⏰ Reminders</div>
               </div>
             </div>
           </div>
@@ -131,7 +131,7 @@ export default function PublicHomePage() {
             The public site explains PlantVerse to search engines and visitors. Your personal dashboard and cloud records remain behind sign-in.
           </p>
         </div>
-        <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="stagger-children mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map(({ icon: Icon, title, text }) => (
             <article key={title} className="feature-card">
               <span className="feature-icon feature-icon-green"><Icon size={22} /></span>

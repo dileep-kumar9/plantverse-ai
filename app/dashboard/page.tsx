@@ -21,19 +21,25 @@ export default function DashboardPage() {
           </div>
 
           <section className="mt-5 grid items-stretch gap-4 sm:mt-7 lg:grid-cols-2 lg:gap-6">
-            <WeatherWidget />
-            <GardenHealth />
+            <div className="animate-fade-in-up" style={{ animationDelay: "60ms" }}><WeatherWidget /></div>
+            <div className="animate-fade-in-up" style={{ animationDelay: "120ms" }}><GardenHealth /></div>
           </section>
 
-          <QuickActions />
+          <div className="animate-fade-in-up" style={{ animationDelay: "160ms" }}>
+            <QuickActions />
+          </div>
 
           <section className="mt-7 grid items-stretch gap-4 sm:mt-9 lg:grid-cols-2 lg:gap-6">
-            <TaskList />
-            <RecentActivity />
+            <div className="animate-fade-in-up" style={{ animationDelay: "200ms" }}><TaskList /></div>
+            <div className="animate-fade-in-up" style={{ animationDelay: "240ms" }}><RecentActivity /></div>
           </section>
 
-          <RecentPlants />
-          <AITips />
+          <div className="animate-fade-in-up" style={{ animationDelay: "280ms" }}>
+            <RecentPlants />
+          </div>
+          <div className="animate-fade-in-up" style={{ animationDelay: "320ms" }}>
+            <AITips />
+          </div>
         </div>
       </main>
     </DashboardDataProvider>

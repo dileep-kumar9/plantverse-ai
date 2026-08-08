@@ -38,7 +38,7 @@ export default function RecentPlants() {
         {data.plants.slice(0, 3).map((plant) => {
           const status = statusFor(Number(plant.health) || 0);
           return (
-            <Link key={plant.id} href="/plants" className="rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]">
+            <Link key={plant.id} href="/plants" className="rounded-[var(--radius-lg)] tap-scale focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]">
               <Card interactive className="h-full">
                 <div className="flex items-start gap-4">
                   <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[var(--brand-soft)] text-2xl" aria-hidden="true">{plant.icon || "🌿"}</div>
