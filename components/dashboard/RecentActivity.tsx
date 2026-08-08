@@ -38,20 +38,26 @@ export default function RecentActivity() {
       ) : null}
 
       <ol className="mt-6 divide-y divide-[var(--border-color)]">
-        {data.analyses.slice(0, 3).map((item) => (
-          <li key={item.id} className="py-4 first:pt-0 last:pb-0">
-            <Link href={`/scan?report=${encodeURIComponent(item.id)}`} className="flex gap-4 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[var(--brand-soft)] text-2xl" aria-hidden="true">📷</div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                  <p className="truncate font-semibold">{item.plantName || `${item.scanType} analysis`}</p>
-                  <time dateTime={item.createdAt} className="shrink-0 text-xs text-[var(--text-tertiary)]">{relativeTime(item.createdAt)}</time>
+        {loading
+          ? [0, 1, 2].map((i) => (
+            <li key={i} className="py-4 first:pt-0 last:pb-0">
+              <div className="skeleton h-12 rounded-2xl" />
+            </li>
+          ))
+          : data.analyses.slice(0, 3).map((item) => (
+            <li key={item.id} className="py-4 first:pt-0 last:pb-0">
+              <Link href={`/scan?report=${encodeURIComponent(item.id)}`} className="tap-scale flex gap-4 rounded-xl p-2 -m-2 transition-colors duration-150 hover:bg-[var(--surface-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[var(--brand-soft)] text-2xl" aria-hidden="true">📷</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                    <p className="truncate font-semibold">{item.plantName || `${item.scanType} analysis`}</p>
+                    <time dateTime={item.createdAt} className="shrink-0 text-xs text-[var(--text-tertiary)]">{relativeTime(item.createdAt)}</time>
+                  </div>
+                  <p className="mt-1 truncate text-sm text-[var(--text-secondary)]">{item.disease || `Health score ${item.healthScore}%`}</p>
                 </div>
-                <p className="mt-1 truncate text-sm text-[var(--text-secondary)]">{item.disease || `Health score ${item.healthScore}%`}</p>
-              </div>
-            </Link>
-          </li>
-        ))}
+              </Link>
+            </li>
+          ))}
       </ol>
     </Card>
   );

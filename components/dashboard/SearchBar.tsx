@@ -294,7 +294,7 @@ export default function SearchBar() {
           id={listboxId}
           role="listbox"
           aria-label="PlantVerse search results"
-          className="absolute left-0 right-0 top-[calc(100%+0.6rem)] max-h-96 overflow-y-auto rounded-2xl border border-(--border-color) bg-(--surface-primary) p-2 shadow-(--shadow-lg)"
+          className="animate-scale-in absolute left-0 right-0 top-[calc(100%+0.6rem)] max-h-96 origin-top overflow-y-auto rounded-2xl border border-(--border-color) bg-(--surface-primary) p-2 shadow-(--shadow-lg)"
         >
           {matches.length > 0 ? (
             matches.map((item, index) => {

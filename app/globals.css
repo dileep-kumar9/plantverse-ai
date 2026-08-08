@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "../styles/tokens.css";
+@import "../styles/animations.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -95,6 +97,34 @@ button {
 ::selection {
   background: var(--brand-soft);
   color: var(--brand-primary);
+}
+
+/* Themed scrollbars — replaces the default thick browser scrollbar wherever
+   content scrolls (sidebar, dropdowns, tables) so it matches the rounded,
+   soft-shadow visual language instead of standing out as a raw OS widget. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-color: var(--border-color);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-tertiary);
 }
 
 .hero-panel {
@@ -638,7 +668,7 @@ button {
     border-radius: 1.25rem;
   }
   .global-ai-button {
-    bottom: max(1rem, calc(env(safe-area-inset-bottom) + .5rem));
+    bottom: max(5.5rem, calc(env(safe-area-inset-bottom) + 5rem));
   }
   .evidence-menu {
     width: min(calc(100vw - 2rem), 28rem);

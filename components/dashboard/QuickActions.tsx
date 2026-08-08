@@ -70,12 +70,12 @@ export default function QuickActions() {
         </h2>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+      <div className="stagger-children grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
         {actions.map((action) => (
           <Link
             key={action.title}
             href={action.href}
-            className="group block rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 sm:h-full"
+            className="group block rounded-3xl tap-scale focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 sm:h-full"
           >
             <Card
               interactive

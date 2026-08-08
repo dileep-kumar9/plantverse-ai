@@ -40,7 +40,7 @@ export default function Button({
     <button
       type={type}
       className={[
-        "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-[var(--duration-fast)]",
+        "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-[var(--duration-fast)] active:scale-95",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2",
         "disabled:cursor-not-allowed disabled:opacity-50",
         variants[variant],

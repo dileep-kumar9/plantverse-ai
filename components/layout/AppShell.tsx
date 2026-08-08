@@ -26,6 +26,13 @@ const links = [
   ["/settings", "⚙️", "Settings"],
 ] as const;
 
+const primaryLinks = [
+  ["/dashboard", "🏠", "Home"],
+  ["/scan", "📷", "Scan"],
+  ["/plants", "🌿", "Plants"],
+  ["/marketplace", "🛒", "Shop"],
+] as const;
+
 const minimalRoutes = [
   "/",
   "/offline",
@@ -116,9 +123,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <button type="button" onClick={toggleTheme} className="icon-button" aria-label="Toggle color theme">
               {dark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <button type="button" onClick={() => setMenu((value) => !value)} className="icon-button lg:hidden" aria-label="Toggle navigation" aria-expanded={menu}>
-              {menu ? <X size={19} /> : <Menu size={19} />}
-            </button>
+            {user ? null : (
+              <button type="button" onClick={() => setMenu((value) => !value)} className="icon-button lg:hidden" aria-label="Toggle navigation" aria-expanded={menu}>
+                {menu ? <X size={19} /> : <Menu size={19} />}
+              </button>
+            )}
             {loading ? (
               <span className="h-10 w-10 animate-pulse rounded-full bg-[var(--surface-secondary)]" aria-label="Checking account" />
             ) : user ? (
@@ -138,8 +147,27 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {sessionError ? <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">{sessionError}</div> : null}
       </header>
 
+      {menu ? (
+        <div
+          className="fixed inset-0 z-40 animate-backdrop-in bg-black/40 backdrop-blur-sm lg:hidden"
+          onClick={() => setMenu(false)}
+          aria-hidden="true"
+        />
+      ) : null}
+
       <div className="mx-auto max-w-[1500px] lg:grid lg:grid-cols-[230px_1fr] lg:gap-5 lg:px-5">
-        <aside className={`${menu ? "block" : "hidden"} border-b border-[var(--border-color)] bg-[var(--surface-primary)] p-3 lg:sticky lg:top-20 lg:mt-4 lg:block lg:h-[calc(100vh-6rem)] lg:overflow-y-auto lg:rounded-3xl lg:border`}>
+        <aside
+          className={`${menu ? "fixed inset-x-0 top-16 z-50 block max-h-[calc(100vh-4rem)] animate-fade-in-down overflow-y-auto rounded-b-3xl shadow-[var(--shadow-lg)]" : "hidden"} border-b border-[var(--border-color)] bg-[var(--surface-primary)] p-3 lg:sticky lg:top-20 lg:z-auto lg:mt-4 lg:block lg:max-h-[calc(100vh-6rem)] lg:animate-none lg:rounded-3xl lg:border lg:shadow-none`}
+        >
+          {menu ? (
+            <button
+              type="button"
+              onClick={() => setMenu(false)}
+              className="mb-2 ml-auto flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] lg:hidden"
+            >
+              <X size={14} /> Close
+            </button>
+          ) : null}
           {user ? (
             <div className="mb-3 rounded-2xl bg-[var(--surface-secondary)] p-3 lg:hidden">
               <p className="truncate text-sm font-semibold">{user.name}</p>
@@ -150,7 +178,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             {links.map(([href, icon, label]) => {
               const active = href === "/dashboard" ? pathname === href : pathname.startsWith(href);
               return (
-                <Link key={href} href={href} className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium ${active ? "bg-[var(--brand-soft)] text-[var(--brand-primary)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]"}`}>
+                <Link key={href} href={href} className={`tap-scale flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${active ? "bg-[var(--brand-soft)] text-[var(--brand-primary)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]"}`}>
                   <span aria-hidden="true">{icon}</span>{label}
                 </Link>
               );
@@ -166,8 +194,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </div>
           ) : null}
         </aside>
-        <div className="min-w-0">
-          {children}
+        <div className="min-w-0 pb-24 lg:pb-0">
+          <div key={pathname} className="page-transition">
+            {children}
+          </div>
           <footer className="mx-auto mt-12 flex max-w-7xl flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-[var(--border-color)] px-4 py-6 text-xs text-[var(--text-secondary)] sm:px-6">
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
@@ -178,6 +208,31 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </footer>
         </div>
       </div>
+
+      {user ? (
+        <nav className="mobile-navigation" aria-label="Quick navigation">
+          {primaryLinks.map(([href, icon, label]) => {
+            const active = href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+            return (
+              <Link key={href} href={href} className={`mobile-nav-item tap-scale ${active ? "mobile-nav-item-active" : ""}`}>
+                <span aria-hidden="true" className="text-lg leading-none">{icon}</span>
+                {label}
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setMenu((value) => !value)}
+            className={`mobile-nav-item tap-scale ${menu ? "mobile-nav-item-active" : ""}`}
+            aria-expanded={menu}
+            aria-label="More navigation options"
+          >
+            <span aria-hidden="true" className="text-lg leading-none">{menu ? <X size={18} /> : <Menu size={18} />}</span>
+            More
+          </button>
+        </nav>
+      ) : null}
+
       {user ? <><GlobalVoiceAssistant /><SelectionTranslator /></> : null}
     </div>
   );
